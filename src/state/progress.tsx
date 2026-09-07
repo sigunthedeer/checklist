@@ -8,12 +8,17 @@ type CheckedMap = Record<string, number[]>;
 
 interface PersistedState {
   checked: CheckedMap;
+  /**
+   * `${aircraftId}/${phaseId}` -> ids of ticked user items. Kept separate from
+   * `checked` because user items are addressed by id, not position.
+   */
+  customChecked: Record<string, string[]>;
   favorites: string[];
   /** Aircraft ids, most recently opened first. */
   recents: string[];
 }
 
-const EMPTY: PersistedState = { checked: {}, favorites: [], recents: [] };
+const EMPTY: PersistedState = { checked: {}, customChecked: {}, favorites: [], recents: [] };
 const MAX_RECENTS = 12;
 
 export const phaseKey = (aircraftId: string, phaseId: string) => `${aircraftId}/${phaseId}`;
@@ -24,6 +29,10 @@ interface ProgressContextValue {
   checkedCount: (aircraftId: string, phaseId: string) => number;
   toggleItem: (aircraftId: string, phaseId: string, index: number) => void;
   setPhaseChecked: (aircraftId: string, phaseId: string, indexes: number[]) => void;
+  isCustomChecked: (aircraftId: string, phaseId: string, itemId: string) => boolean;
+  customCheckedCount: (aircraftId: string, phaseId: string) => number;
+  toggleCustomItem: (aircraftId: string, phaseId: string, itemId: string) => void;
+  setPhaseCustomChecked: (aircraftId: string, phaseId: string, itemIds: string[]) => void;
   resetPhase: (aircraftId: string, phaseId: string) => void;
   resetAircraft: (aircraftId: string) => void;
   resetAll: () => void;
@@ -50,6 +59,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       const merged: PersistedState = {
         checked: stored.checked ?? {},
+        customChecked: stored.customChecked ?? {},
         favorites: stored.favorites ?? [],
         recents: stored.recents ?? [],
       };
@@ -78,6 +88,8 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<ProgressContextValue>(() => {
     const checkedFor = (aircraftId: string, phaseId: string) =>
       state.checked[phaseKey(aircraftId, phaseId)] ?? [];
+    const customCheckedFor = (aircraftId: string, phaseId: string) =>
+      state.customChecked[phaseKey(aircraftId, phaseId)] ?? [];
 
     return {
       ready,
@@ -95,6 +107,28 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
           else checked[key] = next;
           return { ...prev, checked };
         }),
+      isCustomChecked: (a, p, itemId) => customCheckedFor(a, p).includes(itemId),
+      customCheckedCount: (a, p) => customCheckedFor(a, p).length,
+      toggleCustomItem: (a, p, itemId) =>
+        update((prev) => {
+          const key = phaseKey(a, p);
+          const current = prev.customChecked[key] ?? [];
+          const next = current.includes(itemId)
+            ? current.filter((id) => id !== itemId)
+            : [...current, itemId];
+          const customChecked = { ...prev.customChecked };
+          if (next.length === 0) delete customChecked[key];
+          else customChecked[key] = next;
+          return { ...prev, customChecked };
+        }),
+      setPhaseCustomChecked: (a, p, itemIds) =>
+        update((prev) => {
+          const key = phaseKey(a, p);
+          const customChecked = { ...prev.customChecked };
+          if (itemIds.length === 0) delete customChecked[key];
+          else customChecked[key] = [...itemIds];
+          return { ...prev, customChecked };
+        }),
       setPhaseChecked: (a, p, indexes) =>
         update((prev) => {
           const key = phaseKey(a, p);
@@ -105,19 +139,24 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
         }),
       resetPhase: (a, p) =>
         update((prev) => {
+          const key = phaseKey(a, p);
           const checked = { ...prev.checked };
-          delete checked[phaseKey(a, p)];
-          return { ...prev, checked };
+          const customChecked = { ...prev.customChecked };
+          delete checked[key];
+          delete customChecked[key];
+          return { ...prev, checked, customChecked };
         }),
       resetAircraft: (a) =>
         update((prev) => {
           const prefix = `${a}/`;
-          const checked = Object.fromEntries(
-            Object.entries(prev.checked).filter(([k]) => !k.startsWith(prefix)),
-          );
-          return { ...prev, checked };
+          const keep = ([k]: [string, unknown]) => !k.startsWith(prefix);
+          return {
+            ...prev,
+            checked: Object.fromEntries(Object.entries(prev.checked).filter(keep)),
+            customChecked: Object.fromEntries(Object.entries(prev.customChecked).filter(keep)),
+          };
         }),
-      resetAll: () => update((prev) => ({ ...prev, checked: {} })),
+      resetAll: () => update((prev) => ({ ...prev, checked: {}, customChecked: {} })),
       favorites: state.favorites,
       isFavorite: (a) => state.favorites.includes(a),
       toggleFavorite: (a) =>

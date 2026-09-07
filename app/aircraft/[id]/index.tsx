@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { engineSummary, PhaseRow } from '@/components/rows';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
 import { Button, Data, Label, Meter, Panel, Row, SectionHeader, Stat, T } from '@/components/ui';
-import { getAircraft, normalItemCount, SIM_LABEL } from '@/data';
+import { getAircraft, SIM_LABEL } from '@/data';
+import type { ChecklistPhase } from '@/data';
 import { useProgress } from '@/state/progress';
+import { useCustom } from '@/state/custom';
 import { useTheme } from '@/state/settings';
 import { SPACE } from '@/theme';
 
@@ -13,21 +15,27 @@ export default function AircraftScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const progress = useProgress();
+  const custom = useCustom();
   const { isWide, isTablet } = useResponsive();
   const aircraft = getAircraft(id);
 
+  // Totals span the built-in items and anything the user added to this aircraft.
   const totals = useMemo(() => {
     if (!aircraft) return { done: 0, total: 0, nextPhaseId: undefined as string | undefined };
-    const total = normalItemCount(aircraft);
     let done = 0;
+    let total = 0;
     let nextPhaseId: string | undefined;
     for (const phase of aircraft.phases) {
-      const count = progress.checkedCount(aircraft.id, phase.id);
-      done += count;
-      if (!nextPhaseId && count < phase.items.length) nextPhaseId = phase.id;
+      const phaseTotal = phase.items.length + custom.itemsFor(aircraft.id, phase.id).length;
+      const phaseDone =
+        progress.checkedCount(aircraft.id, phase.id) +
+        progress.customCheckedCount(aircraft.id, phase.id);
+      done += phaseDone;
+      total += phaseTotal;
+      if (!nextPhaseId && phaseDone < phaseTotal) nextPhaseId = phase.id;
     }
     return { done, total, nextPhaseId };
-  }, [aircraft, progress]);
+  }, [aircraft, progress, custom]);
 
   if (!aircraft) {
     return (
@@ -46,31 +54,40 @@ export default function AircraftScreen() {
   const favorite = progress.isFavorite(aircraft.id);
   const stripColumns = isTablet ? 4 : 2;
 
-  const confirmReset = () =>
-    Alert.alert(
-      'Reset progress',
-      `Clear every ticked item for the ${aircraft.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: () => progress.resetAircraft(aircraft.id) },
-      ],
-      { cancelable: true },
-    );
+  const phaseCounts = (phase: ChecklistPhase) => ({
+    checked:
+      progress.checkedCount(aircraft.id, phase.id) +
+      progress.customCheckedCount(aircraft.id, phase.id),
+    total: phase.items.length + custom.itemsFor(aircraft.id, phase.id).length,
+  });
+
+  const startNewFlight = () => {
+    progress.resetAircraft(aircraft.id);
+    router.push(`/aircraft/${aircraft.id}/${aircraft.phases[0].id}`);
+  };
+
+  // Only worth confirming when there is something to lose.
+  const newFlight = () =>
+    totals.done === 0
+      ? startNewFlight()
+      : Alert.alert(
+          'New flight',
+          `Clear every ticked item for the ${aircraft.name} and start at the first checklist?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'New flight', style: 'destructive', onPress: startNewFlight },
+          ],
+          { cancelable: true },
+        );
 
   const checklists = (
     <View>
       <View style={styles.section}>
         <SectionHeader
           trailing={
-            totals.done > 0 ? (
-              <Pressable onPress={confirmReset} hitSlop={8} accessibilityRole="button">
-                <Label color={theme.textDim}>Reset</Label>
-              </Pressable>
-            ) : (
-              <Data size={12} color={theme.textFaint}>
-                {String(aircraft.phases.length).padStart(2, '0')}
-              </Data>
-            )
+            <Data size={12} color={theme.textFaint}>
+              {String(aircraft.phases.length).padStart(2, '0')}
+            </Data>
           }
         >
           Normal procedures
@@ -82,7 +99,7 @@ export default function AircraftScreen() {
               phase={phase}
               index={i + 1}
               first={i === 0}
-              checked={progress.checkedCount(aircraft.id, phase.id)}
+              {...phaseCounts(phase)}
               onPress={() => router.push(`/aircraft/${aircraft.id}/${phase.id}`)}
             />
           ))}
@@ -107,7 +124,7 @@ export default function AircraftScreen() {
                 phase={phase}
                 index={i + 1}
                 first={i === 0}
-                checked={progress.checkedCount(aircraft.id, phase.id)}
+                {...phaseCounts(phase)}
                 onPress={() => router.push(`/aircraft/${aircraft.id}/${phase.id}`)}
               />
             ))}
@@ -119,6 +136,32 @@ export default function AircraftScreen() {
 
   const reference = (
     <View>
+      <View style={styles.section}>
+        <SectionHeader
+          trailing={
+            custom.countForAircraft(aircraft.id) > 0 ? (
+              <Data size={12} color={theme.textFaint}>
+                {custom.countForAircraft(aircraft.id)} items
+              </Data>
+            ) : undefined
+          }
+        >
+          Your notes
+        </SectionHeader>
+        <Panel>
+          <Row first>
+            <TextInput
+              value={custom.noteFor(aircraft.id)}
+              onChangeText={(text) => custom.setNote(aircraft.id, text)}
+              placeholder="Mod-specific steps, keybinds, anything you want to remember about this aircraft."
+              placeholderTextColor={theme.textFaint}
+              multiline
+              style={[styles.notes, { color: theme.text }]}
+            />
+          </Row>
+        </Panel>
+      </View>
+
       {aircraft.speeds?.length ? (
         <View style={styles.section}>
           <SectionHeader>Reference speeds</SectionHeader>
@@ -258,14 +301,19 @@ export default function AircraftScreen() {
               </Data>
             </View>
             <Meter value={totals.done} total={totals.total} color={theme.ok} height={3} />
-            <Button
-              label={totals.done === 0 ? 'Start first checklist' : 'Continue where you left off'}
-              color={theme.accent}
-              onPress={() =>
-                router.push(`/aircraft/${aircraft.id}/${totals.nextPhaseId ?? aircraft.phases[0].id}`)
-              }
-              style={styles.startButton}
-            />
+            <View style={styles.actionRow}>
+              {totals.done > 0 ? (
+                <Button label="New flight" variant="quiet" onPress={newFlight} style={styles.actionSecondary} />
+              ) : null}
+              <Button
+                label={totals.done === 0 ? 'Start flight' : 'Continue'}
+                color={theme.accent}
+                onPress={() =>
+                  router.push(`/aircraft/${aircraft.id}/${totals.nextPhaseId ?? aircraft.phases[0].id}`)
+                }
+                style={styles.actionPrimary}
+              />
+            </View>
           </View>
 
           {isWide ? (
@@ -296,7 +344,9 @@ const styles = StyleSheet.create({
   stripCell: { paddingVertical: SPACE.md, paddingHorizontal: SPACE.md },
   actionBlock: { marginBottom: SPACE.xl, gap: SPACE.sm },
   progressLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  startButton: { marginTop: SPACE.sm },
+  actionRow: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.sm },
+  actionSecondary: { width: 116 },
+  actionPrimary: { flex: 1 },
   section: { marginBottom: SPACE.xl },
   twoPane: { flexDirection: 'row', gap: SPACE.xl },
   pane: { flex: 1 },
@@ -304,4 +354,5 @@ const styles = StyleSheet.create({
   speedValue: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   specValue: { flexShrink: 1, maxWidth: '58%' },
   noteRow: { flexDirection: 'row', gap: SPACE.sm },
+  notes: { minHeight: 84, fontSize: 14, lineHeight: 20, textAlignVertical: 'top', padding: 0 },
 });

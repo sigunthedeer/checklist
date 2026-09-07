@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { ChecklistRow } from '@/components/checklist';
-import { ContentWidth, Screen } from '@/components/layout';
-import { Button, Data, Label, Meter, Panel, T, Tabs } from '@/components/ui';
+import { ContentWidth, Screen, useResponsive } from '@/components/layout';
+import { Button, Data, Label, Meter, Panel, Row, SectionHeader, T, Tabs } from '@/components/ui';
 import { getAircraft, getPhase } from '@/data';
 import { useProgress } from '@/state/progress';
+import { useCustom } from '@/state/custom';
 import { useSettings, useTheme } from '@/state/settings';
 import { accentFor, PHASE_COLOR, PHASE_LABEL, RADIUS, SPACE } from '@/theme';
 
@@ -18,14 +19,20 @@ export default function ChecklistScreen() {
   const theme = useTheme();
   const { settings } = useSettings();
   const progress = useProgress();
+  const custom = useCustom();
+  const { width } = useResponsive();
 
   const aircraft = getAircraft(id);
   const phase = aircraft ? getPhase(aircraft, phaseId) : undefined;
 
   const scrollRef = useRef<ScrollView>(null);
   const offsets = useRef<number[]>([]);
+  const listTop = useRef(0);
   const [scrollHeight, setScrollHeight] = useState(0);
   const [scrollY, setScrollY] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [draftChallenge, setDraftChallenge] = useState('');
+  const [draftResponse, setDraftResponse] = useState('');
 
   useEffect(() => {
     if (!settings.keepAwake) return;
@@ -53,10 +60,11 @@ export default function ChecklistScreen() {
 
   const checkedCount = useMemo(() => {
     if (!aircraft || !phase) return 0;
-    return phase.items.reduce(
+    const builtIn = phase.items.reduce(
       (sum, _, i) => sum + (progress.isChecked(aircraft.id, phase.id, i) ? 1 : 0),
       0,
     );
+    return builtIn + progress.customCheckedCount(aircraft.id, phase.id);
   }, [aircraft, phase, progress]);
 
   /** The list this phase belongs to: normal procedures, or the emergency set. */
@@ -66,14 +74,44 @@ export default function ChecklistScreen() {
     return normal.some((p) => p.id === phase.id) ? normal : (aircraft.emergency ?? []);
   }, [aircraft, phase]);
 
+  // A stretched full-width row puts the challenge and its response too far apart
+  // to pair by eye, so wide screens get two narrower columns instead.
+  const itemColumns = width >= 900 ? 2 : 1;
+
+  const itemColumnGroups = useMemo(() => {
+    const numbered = (phase?.items ?? []).map((item, index) => ({ item, index }));
+    if (itemColumns === 1) return [numbered];
+    const perColumn = Math.ceil(numbered.length / itemColumns);
+    return Array.from({ length: itemColumns }, (_, column) =>
+      numbered.slice(column * perColumn, (column + 1) * perColumn),
+    );
+  }, [phase?.items, itemColumns]);
+
   const position = siblings.findIndex((p) => p.id === phase?.id);
   const nextPhase = position >= 0 ? siblings[position + 1] : undefined;
+  /** The last normal checklist: finishing it ends the flight rather than the list. */
+  const isLastOfFlight =
+    !nextPhase && position >= 0 && phase?.kind !== 'emergency' && siblings === aircraft?.phases;
 
   const scrollToItem = useCallback((index: number) => {
     const y = offsets.current[index];
     if (y == null) return;
     scrollRef.current?.scrollTo({ y: Math.max(0, y - 90), animated: true });
   }, []);
+
+  const onToggleCustom = useCallback(
+    (itemId: string) => {
+      if (!aircraft || !phase) return;
+      const wasChecked = progress.isCustomChecked(aircraft.id, phase.id, itemId);
+      progress.toggleCustomItem(aircraft.id, phase.id, itemId);
+      if (settings.haptics && Platform.OS !== 'web') {
+        void Haptics.impactAsync(
+          wasChecked ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
+        );
+      }
+    },
+    [aircraft, phase, progress, settings.haptics],
+  );
 
   const onToggle = useCallback(
     (index: number) => {
@@ -101,6 +139,12 @@ export default function ChecklistScreen() {
     [aircraft, phase, progress, settings.haptics, settings.autoAdvance, scrollToItem, scrollY, scrollHeight],
   );
 
+  const finishFlight = useCallback(() => {
+    if (!aircraft) return;
+    progress.resetAircraft(aircraft.id);
+    router.replace(`/aircraft/${aircraft.id}`);
+  }, [aircraft, progress]);
+
   const goToPhase = useCallback(
     (nextId: string) => {
       if (!aircraft || nextId === phase?.id) return;
@@ -125,7 +169,8 @@ export default function ChecklistScreen() {
     );
   }
 
-  const total = phase.items.length;
+  const customItems = custom.itemsFor(aircraft.id, phase.id);
+  const total = phase.items.length + customItems.length;
   const complete = total > 0 && checkedCount >= total;
   const emergency = phase.kind === 'emergency';
   const accent = emergency ? theme.warning : theme.accent;
@@ -216,35 +261,100 @@ export default function ChecklistScreen() {
             </View>
           ) : null}
 
-          <Panel>
-            {phase.items.map((item, index) => (
-              <View
-                key={`${item.c}-${index}`}
-                onLayout={(e) => {
-                  offsets.current[index] = e.nativeEvent.layout.y;
-                }}
-              >
-                <ChecklistRow
-                  item={item}
-                  index={index}
-                  first={index === 0}
-                  accent={accent}
-                  checked={progress.isChecked(aircraft.id, phase.id, index)}
-                  onToggle={() => onToggle(index)}
-                />
+          <View
+            style={itemColumns > 1 ? styles.itemColumns : undefined}
+            onLayout={(e) => {
+              listTop.current = e.nativeEvent.layout.y;
+            }}
+          >
+            {itemColumnGroups.map((group, column) => (
+              <View key={column} style={itemColumns > 1 ? styles.itemColumn : undefined}>
+                <Panel>
+                  {group.map(({ item, index }, positionInColumn) => (
+                    <View
+                      key={`${item.c}-${index}`}
+                      onLayout={(e) => {
+                        // Both columns share a top edge, so the group offset is enough
+                        // to turn a column-relative y into a scrollable one.
+                        offsets.current[index] = listTop.current + e.nativeEvent.layout.y;
+                      }}
+                    >
+                      <ChecklistRow
+                        item={item}
+                        index={index}
+                        first={positionInColumn === 0}
+                        accent={accent}
+                        checked={progress.isChecked(aircraft.id, phase.id, index)}
+                        onToggle={() => onToggle(index)}
+                      />
+                    </View>
+                  ))}
+                </Panel>
               </View>
             ))}
-          </Panel>
+          </View>
+
+          <View style={styles.customSection}>
+            <SectionHeader
+              trailing={
+                customItems.length > 0 ? (
+                  <Data size={12} color={theme.textFaint}>
+                    {String(customItems.length).padStart(2, '0')}
+                  </Data>
+                ) : undefined
+              }
+            >
+              Your items
+            </SectionHeader>
+            <Panel>
+              {customItems.map((item, i) => (
+                <ChecklistRow
+                  key={item.id}
+                  item={{ c: item.c, r: item.r }}
+                  index={phase.items.length + i}
+                  label={'\u270e'}
+                  first={i === 0}
+                  accent={accent}
+                  checked={progress.isCustomChecked(aircraft.id, phase.id, item.id)}
+                  onToggle={() => onToggleCustom(item.id)}
+                  onDelete={() =>
+                    Alert.alert(
+                      'Delete item',
+                      `Remove "${item.c}" from this checklist?`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Delete',
+                          style: 'destructive',
+                          onPress: () => custom.removeItem(aircraft.id, phase.id, item.id),
+                        },
+                      ],
+                      { cancelable: true },
+                    )
+                  }
+                />
+              ))}
+              <Row first={customItems.length === 0} onPress={() => setAdding(true)}>
+                <T size={14} weight="600" color={theme.accent}>
+                  {'+   Add item'}
+                </T>
+              </Row>
+            </Panel>
+          </View>
 
           {complete ? (
             <View style={[styles.done, { borderColor: theme.ok, backgroundColor: theme.surface }]}>
-              <Label color={theme.ok}>Checklist complete</Label>
+              <Label color={theme.ok}>{isLastOfFlight ? 'Flight complete' : 'Checklist complete'}</Label>
               <T size={15} weight="700" style={{ marginTop: 4 }}>
                 {phase.name}
               </T>
               {nextPhase ? (
                 <T size={13} color={theme.textDim} style={{ marginTop: 4 }}>
                   Next: {nextPhase.name}
+                </T>
+              ) : isLastOfFlight ? (
+                <T size={13} color={theme.textDim} style={{ marginTop: 4, textAlign: 'center' }}>
+                  That is the last checklist. Finishing clears the aircraft for your next flight.
                 </T>
               ) : null}
             </View>
@@ -257,15 +367,22 @@ export default function ChecklistScreen() {
           <Button
             label={checkedCount === 0 ? 'Check all' : 'Reset'}
             variant="quiet"
-            onPress={() =>
-              checkedCount === 0
-                ? progress.setPhaseChecked(
-                    aircraft.id,
-                    phase.id,
-                    phase.items.map((_, i) => i),
-                  )
-                : progress.resetPhase(aircraft.id, phase.id)
-            }
+            onPress={() => {
+              if (checkedCount > 0) {
+                progress.resetPhase(aircraft.id, phase.id);
+                return;
+              }
+              progress.setPhaseChecked(
+                aircraft.id,
+                phase.id,
+                phase.items.map((_, i) => i),
+              );
+              progress.setPhaseCustomChecked(
+                aircraft.id,
+                phase.id,
+                customItems.map((item) => item.id),
+              );
+            }}
             style={styles.actionSmall}
           />
           {nextPhase ? (
@@ -273,6 +390,13 @@ export default function ChecklistScreen() {
               label={`Next  ·  ${nextPhase.name}`}
               color={accent}
               onPress={() => goToPhase(nextPhase.id)}
+              style={styles.actionMain}
+            />
+          ) : isLastOfFlight && complete ? (
+            <Button
+              label="Finish flight"
+              color={theme.ok}
+              onPress={finishFlight}
               style={styles.actionMain}
             />
           ) : (
@@ -285,6 +409,66 @@ export default function ChecklistScreen() {
           )}
         </ContentWidth>
       </View>
+      <Modal
+        transparent
+        animationType="fade"
+        visible={adding}
+        onRequestClose={() => setAdding(false)}
+      >
+        <View style={[styles.backdrop, { backgroundColor: theme.overlay }]}>
+          <View style={[styles.sheet, { backgroundColor: theme.surface, borderColor: theme.borderStrong }]}>
+            <Label>Add to {phase.name}</Label>
+            <T size={12} color={theme.textFaint} style={{ marginTop: SPACE.sm }}>
+              Your items stay on this device and are kept when the built-in checklists change.
+            </T>
+
+            <Label style={{ marginTop: SPACE.lg }}>Challenge</Label>
+            <TextInput
+              value={draftChallenge}
+              onChangeText={setDraftChallenge}
+              placeholder="Fuel selector"
+              placeholderTextColor={theme.textFaint}
+              autoFocus
+              style={[styles.input, { color: theme.text, borderColor: theme.borderStrong }]}
+            />
+
+            <Label style={{ marginTop: SPACE.md }}>Response</Label>
+            <TextInput
+              value={draftResponse}
+              onChangeText={setDraftResponse}
+              placeholder="BOTH"
+              placeholderTextColor={theme.textFaint}
+              autoCapitalize="characters"
+              style={[styles.input, { color: theme.text, borderColor: theme.borderStrong }]}
+            />
+
+            <View style={styles.sheetActions}>
+              <Button
+                label="Cancel"
+                variant="quiet"
+                onPress={() => {
+                  setAdding(false);
+                  setDraftChallenge('');
+                  setDraftResponse('');
+                }}
+                style={styles.actionMain}
+              />
+              <Button
+                label="Add item"
+                color={accent}
+                disabled={draftChallenge.trim() === '' || draftResponse.trim() === ''}
+                onPress={() => {
+                  custom.addItem(aircraft.id, phase.id, draftChallenge, draftResponse);
+                  setAdding(false);
+                  setDraftChallenge('');
+                  setDraftResponse('');
+                }}
+                style={styles.actionMain}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -297,6 +481,8 @@ const styles = StyleSheet.create({
   statusLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, flexShrink: 1 },
   kindDot: { width: 6, height: 6, borderRadius: 3 },
   scroll: { paddingBottom: SPACE.xxl },
+  itemColumns: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md },
+  itemColumn: { flex: 1 },
   body: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.lg },
   banner: {
     borderRadius: RADIUS.md,
@@ -315,4 +501,22 @@ const styles = StyleSheet.create({
   actionsInner: { flexDirection: 'row', gap: SPACE.sm, paddingHorizontal: SPACE.lg },
   actionSmall: { width: 104 },
   actionMain: { flex: 1 },
+  customSection: { marginTop: SPACE.xl },
+  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACE.xl },
+  sheet: {
+    width: '100%',
+    maxWidth: 460,
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: SPACE.xl,
+  },
+  input: {
+    marginTop: SPACE.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACE.md,
+    height: 42,
+    fontSize: 15,
+  },
+  sheetActions: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.xl },
 });

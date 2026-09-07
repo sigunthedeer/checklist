@@ -15,6 +15,8 @@ export const ChecklistRow = memo(function ChecklistRow({
   onToggle,
   accent,
   first,
+  label,
+  onDelete,
 }: {
   item: ChecklistItem;
   index: number;
@@ -22,6 +24,10 @@ export const ChecklistRow = memo(function ChecklistRow({
   onToggle: () => void;
   accent: string;
   first?: boolean;
+  /** Shown instead of the item number, e.g. a marker for a user's own item. */
+  label?: string;
+  /** When given, a delete control appears at the end of the row. */
+  onDelete?: () => void;
 }) {
   const theme = useTheme();
   const { settings } = useSettings();
@@ -44,7 +50,7 @@ export const ChecklistRow = memo(function ChecklistRow({
     >
       <View style={styles.indexGutter}>
         <Data size={11} color={checked ? theme.ok : theme.textFaint} align="left">
-          {String(index + 1).padStart(2, '0')}
+          {label ?? String(index + 1).padStart(2, '0')}
         </Data>
       </View>
 
@@ -109,6 +115,20 @@ export const ChecklistRow = memo(function ChecklistRow({
           </View>
         ) : null}
       </View>
+
+      {onDelete ? (
+        <Pressable
+          onPress={onDelete}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${item.c}`}
+          style={styles.delete}
+        >
+          <T size={15} color={theme.textFaint}>
+            {'\u00d7'}
+          </T>
+        </Pressable>
+      ) : null}
     </Pressable>
   );
 });
@@ -142,4 +162,5 @@ const styles = StyleSheet.create({
   cond: { marginBottom: 3 },
   note: { marginTop: 4 },
   warn: { marginTop: 6, paddingLeft: SPACE.sm, borderLeftWidth: 2 },
+  delete: { width: 22, alignItems: 'flex-end', paddingTop: 2 },
 });

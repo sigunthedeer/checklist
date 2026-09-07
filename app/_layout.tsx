@@ -8,6 +8,7 @@ import * as SystemUI from 'expo-system-ui';
 import { Button, Label, T } from '@/components/ui';
 import { SettingsProvider, useSettings, useTheme } from '@/state/settings';
 import { ProgressProvider } from '@/state/progress';
+import { CustomProvider } from '@/state/custom';
 import { RADIUS, SPACE } from '@/theme';
 
 export default function RootLayout() {
@@ -16,7 +17,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <SettingsProvider>
           <ProgressProvider>
-            <Shell />
+            <CustomProvider>
+              <Shell />
+            </CustomProvider>
           </ProgressProvider>
         </SettingsProvider>
       </SafeAreaProvider>

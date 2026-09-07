@@ -86,9 +86,21 @@ tabular values in a monospaced face, and small-caps labels above every figure.
   type data as proper right-aligned tables. Two panes on a tablet.
 - **Checklist runner** with a dotted-leader layout that reads like a printed checklist, a phase
   tab strip so you can jump between checklists without going back, progress that survives closing
-  the app, auto-scroll to the next open item, haptics, and a screen-on lock.
+  the app, auto-scroll to the next open item, haptics, and a screen-on lock. On a wide screen the
+  items flow into two columns so a whole checklist fits without scrolling, read down one column
+  then down the next.
+- **Flights, not just ticks.** Start a flight, work the lists in order, and finishing the last one
+  offers to clear the aircraft for the next flight, so you never begin pre-ticked.
+- **Your own items and notes.** Add checklist items for mod-specific steps or personal flows, and
+  keep free-text notes per aircraft. Both are stored on the device against stable ids, so they
+  survive updates to the built-in checklists.
 - **Three themes**: Slate (dark, cyan accent), Night (red on black, to protect dark adaptation),
   and Day. Four text sizes for a tablet clamped to a yoke mount.
+
+## Checks
+
+`.github/workflows/ci.yml` runs the typecheck, the dataset validator and a full web build on every
+push. Pushes deploy straight to the host, so a broken data file has to fail there first.
 
 ## Adding an aircraft
 

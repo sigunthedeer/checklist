@@ -114,6 +114,7 @@ export function PhaseRow({
   phase,
   index,
   checked,
+  total,
   onPress,
   first,
 }: {
@@ -121,11 +122,12 @@ export function PhaseRow({
   /** 1-based position in the aircraft's normal procedures. */
   index: number;
   checked: number;
+  /** Built-in items plus any the user added to this checklist. */
+  total: number;
   onPress: () => void;
   first?: boolean;
 }) {
   const theme = useTheme();
-  const total = phase.items.length;
   const complete = total > 0 && checked >= total;
   const kindColor = accentFor(theme, PHASE_COLOR[phase.kind]);
 
