@@ -29,15 +29,25 @@ export default function ChecklistScreen() {
 
   useEffect(() => {
     if (!settings.keepAwake) return;
-    // Web denies the wake lock when the page is not user-activated; that is fine.
-    activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => undefined);
+
+    // Both calls can reject: browsers deny the wake lock unless the page has been
+    // interacted with, and releasing a lock that never activated throws. Neither is
+    // worth surfacing, but the release still has to wait for the request to settle
+    // so a fast unmount does not leave the screen pinned on.
+    let cancelled = false;
+    let held = false;
+    const release = () => deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => undefined);
+
+    activateKeepAwakeAsync(KEEP_AWAKE_TAG)
+      .then(() => {
+        held = true;
+        if (cancelled) void release();
+      })
+      .catch(() => undefined);
+
     return () => {
-      // deactivateKeepAwake rejects if the tag was never active; ignore that.
-      try {
-        void deactivateKeepAwake(KEEP_AWAKE_TAG);
-      } catch {
-        /* no-op */
-      }
+      cancelled = true;
+      if (held) void release();
     };
   }, [settings.keepAwake]);
 

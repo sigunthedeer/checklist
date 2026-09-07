@@ -18,7 +18,7 @@ import {
 } from '@/data';
 import { useProgress } from '@/state/progress';
 import { useSettings, useTheme } from '@/state/settings';
-import { SPACE } from '@/theme';
+import { accentFor, SPACE } from '@/theme';
 
 type SimFilter = SimVersion | 'all';
 
@@ -152,7 +152,7 @@ export default function FleetScreen() {
                     key={a.id}
                     label={a.name}
                     onPress={() => router.push(`/aircraft/${a.id}`)}
-                    color={a.accent}
+                    color={accentFor(theme, a.accent)}
                   />
                 ))}
               </ScrollView>
