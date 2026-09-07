@@ -1,0 +1,15 @@
+{
+  "name": "Checkride",
+  "short_name": "Checkride",
+  "description": "Aircraft checklists for Microsoft Flight Simulator. Simulator use only.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B1017",
+  "theme_color": "#0B1017",
+  "icons": [
+    { "src": "/icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "/icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ]
+}

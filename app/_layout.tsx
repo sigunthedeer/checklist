@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -29,8 +29,13 @@ function Shell() {
   const { settings, ready, set } = useSettings();
 
   // Paint the window background so the gap behind the navigator matches the theme.
+  // On web that also means the browser chrome and the installed app's splash.
   React.useEffect(() => {
     void SystemUI.setBackgroundColorAsync(theme.bg);
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.bg);
+      document.documentElement.style.backgroundColor = theme.bg;
+    }
   }, [theme.bg]);
 
   return (

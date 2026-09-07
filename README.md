@@ -24,12 +24,26 @@ npm start          # then scan the QR code with Expo Go, or press a / i / w
 | `npm run web` | run in a browser, handy for quick layout checks |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run validate:data` | checks the dataset for duplicate ids, empty lists and blank items |
+| `npm run build:web` | builds an installable PWA into `dist/`, ready for any static host |
 
-Building installable binaries uses EAS:
+### On a tablet without a PC
+
+`npm start` needs a computer on the same network, so for a tablet on its own the web build is the
+way in:
 
 ```bash
-npx eas build -p android --profile preview
-npx eas build -p ios --profile preview
+npm run build:web        # static PWA in dist/
+```
+
+Host `dist/` anywhere static (Vercel, Netlify, GitHub Pages, a Raspberry Pi), open the URL on the
+tablet, then **Add to Home Screen**. It installs as a standalone app with its own icon, no browser
+chrome, and a service worker that keeps it working with the tablet offline.
+
+### Installable native builds
+
+```bash
+npx eas build -p android --profile preview   # APK you can sideload
+npx eas build -p ios --profile preview       # TestFlight or an ad-hoc build
 ```
 
 ## The fleet
