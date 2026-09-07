@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
+  Animated,
   Platform,
   Pressable,
   StyleSheet,
@@ -243,6 +244,61 @@ export function Button({
   );
 }
 
+/**
+ * Themed switch. The platform Switch ignores most colour props on iOS and web,
+ * which breaks night mode, so this draws its own track and thumb.
+ */
+export function Toggle({
+  value,
+  onValueChange,
+  accessibilityLabel,
+}: {
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  accessibilityLabel?: string;
+}) {
+  const theme = useTheme();
+  const slide = useRef(new Animated.Value(value ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(slide, {
+      toValue: value ? 1 : 0,
+      duration: 140,
+      useNativeDriver: true,
+    }).start();
+  }, [value, slide]);
+
+  const translateX = slide.interpolate({ inputRange: [0, 1], outputRange: [2, 22] });
+
+  return (
+    <Pressable
+      onPress={() => onValueChange(!value)}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={8}
+      style={({ pressed }) => [
+        styles.toggleTrack,
+        {
+          backgroundColor: value ? theme.accent : theme.border,
+          borderColor: value ? theme.accent : theme.borderStrong,
+          opacity: pressed ? 0.8 : 1,
+        },
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.toggleThumb,
+          {
+            backgroundColor: value ? (theme.dark ? theme.bg : '#FFFFFF') : theme.textFaint,
+            transform: [{ translateX }],
+          },
+        ]}
+      />
+    </Pressable>
+  );
+}
+
 export function SectionTitle({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   const theme = useTheme();
   return (
@@ -295,6 +351,18 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  toggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: RADIUS.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+  },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: RADIUS.pill,
   },
   sectionTitle: {
     flexDirection: 'row',

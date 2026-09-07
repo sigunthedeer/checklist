@@ -7,22 +7,62 @@ import {
   citationLongitude,
 } from './aircraft/cessna-turbine';
 import { a320neo, b7478i, b78710 } from './aircraft/airliners';
+import { baronG58, bonanzaG36, cirrusSR22, da40ng, da62 } from './aircraft/pistons';
+import { airTractor802, kingAir350i, tbm930 } from './aircraft/turboprops';
+import { ctls, iconA5, savageCub, vl3, xcub } from './aircraft/light';
+import { cap10c, extra330lt, pittsS2S } from './aircraft/aerobatic';
+import { bell407, cabriG2, h125, r22 } from './aircraft/helicopters';
+import { discus2c, dg1001e } from './aircraft/gliders';
+import { boeing247d } from './aircraft/vintage';
 
 /**
  * The fleet. Adding an aircraft is a matter of writing its data file and
  * appending it here: every screen is driven off this array.
  */
 export const AIRCRAFT: Aircraft[] = [
+  // Airliners
   a320neo,
   b7478i,
   b78710,
+  // Business jets
   citationCJ4,
   citationLongitude,
+  // Turboprops
+  tbm930,
   cessna208b,
+  kingAir350i,
   cessna408SkyCourier,
+  airTractor802,
+  // Piston twins
+  baronG58,
+  da62,
+  // Piston singles
   cessna152,
   cessna172G1000,
   cessna172Classic,
+  cirrusSR22,
+  bonanzaG36,
+  da40ng,
+  // Light sport and ultralight
+  xcub,
+  savageCub,
+  iconA5,
+  ctls,
+  vl3,
+  // Aerobatic
+  pittsS2S,
+  extra330lt,
+  cap10c,
+  // Helicopters
+  h125,
+  bell407,
+  cabriG2,
+  r22,
+  // Gliders
+  dg1001e,
+  discus2c,
+  // Vintage
+  boeing247d,
 ];
 
 const BY_ID = new Map(AIRCRAFT.map((a) => [a.id, a]));

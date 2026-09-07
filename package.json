@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "validate:data": "tsc -p scripts/tsconfig.json && node .validate/scripts/validate-data.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "^57.0.15",
@@ -34,6 +35,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@types/node": "^22.20.1",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^57.0.10",
     "typescript": "~6.0.3"

@@ -124,7 +124,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   body: { flex: 1 },
-  line: { flexDirection: 'row', alignItems: 'flex-end' },
+  // Baseline alignment keeps the challenge and the dots on the first line when a
+  // long response wraps, the way a printed checklist reads.
+  line: { flexDirection: 'row', alignItems: 'baseline' },
   challenge: { flexShrink: 1 },
   struck: { textDecorationLine: 'line-through' },
   // flexBasis 0 keeps the dots out of the shrink calculation, so the challenge and

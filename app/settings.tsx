@@ -1,7 +1,7 @@
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { ContentWidth, Screen } from '@/components/layout';
-import { Button, Card, Chip, SectionTitle, T } from '@/components/ui';
+import { Button, Card, Chip, SectionTitle, T, Toggle } from '@/components/ui';
 import { AIRCRAFT, SIM_LABEL } from '@/data';
 import { useProgress } from '@/state/progress';
 import { useSettings, useTheme } from '@/state/settings';
@@ -192,12 +192,7 @@ function ToggleRow({
           {hint}
         </T>
       </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ true: theme.accent, false: theme.border }}
-        thumbColor={theme.dark ? theme.text : undefined}
-      />
+      <Toggle value={value} onValueChange={onChange} accessibilityLabel={label} />
     </View>
   );
 }

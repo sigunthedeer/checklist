@@ -23,6 +23,7 @@ npm start          # then scan the QR code with Expo Go, or press a / i / w
 | `npm run ios` | open on an iOS simulator (macOS only) |
 | `npm run web` | run in a browser, handy for quick layout checks |
 | `npm run typecheck` | TypeScript, no emit |
+| `npm run validate:data` | checks the dataset for duplicate ids, empty lists and blank items |
 
 Building installable binaries uses EAS:
 
@@ -30,6 +31,27 @@ Building installable binaries uses EAS:
 npx eas build -p android --profile preview
 npx eas build -p ios --profile preview
 ```
+
+## The fleet
+
+33 aircraft, 388 checklists, close to 3,000 items, covering every category the sim flies:
+
+| category | aircraft |
+| --- | --- |
+| Airliners | A320neo, 747-8 Intercontinental, 787-10 Dreamliner |
+| Business jets | Citation CJ4, Citation Longitude |
+| Turboprops | TBM 930, 208B Grand Caravan EX, King Air 350i, 408 SkyCourier, Air Tractor AT-802 |
+| Piston twins | Baron G58, DA62 |
+| Piston singles | 152, 172 (G1000 and classic), SR22, Bonanza G36, DA40 NG |
+| Light sport | XCub, Savage Cub S, ICON A5, CTLS, VL-3 |
+| Aerobatic | Pitts S2S, Extra 330LT, Cap 10 C |
+| Helicopters | H125, Bell 407, Cabri G2, R22 Beta II |
+| Gliders | DG-1001E neo, Discus-2c |
+| Vintage | Boeing 247D |
+
+Each one carries its normal procedures in flight order plus its non-normal drills, kept in a
+separate section so you never start one by accident. Where a published figure varies by weight,
+serial or configuration, the entry says so rather than inventing precision it does not have.
 
 ## What is in the app
 
