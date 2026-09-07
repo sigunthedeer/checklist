@@ -1,0 +1,32 @@
+name: CI
+
+# Pushes to this repo deploy straight to the host, so everything that can catch a
+# broken dataset or a broken build has to run before that happens.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Validate aircraft data
+        run: npm run validate:data
+
+      # Catches an export that type-checks but cannot actually bundle.
+      - name: Build web
+        run: npm run build:web
