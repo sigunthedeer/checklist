@@ -21,9 +21,6 @@ for (const aircraft of AIRCRAFT) {
   if (!aircraft.manufacturer.trim()) problems.push(`${aircraft.id}: blank manufacturer`);
   if (aircraft.sims.length === 0) problems.push(`${aircraft.id}: no sim versions`);
   if (aircraft.phases.length === 0) problems.push(`${aircraft.id}: no checklists`);
-  if (!/^#[0-9A-Fa-f]{6}$/.test(aircraft.accent)) {
-    problems.push(`${aircraft.id}: accent is not a 6 digit hex colour`);
-  }
 
   const phaseIds = new Set<string>();
   for (const phase of [...aircraft.phases, ...(aircraft.emergency ?? [])]) {

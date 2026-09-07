@@ -10,7 +10,6 @@ export const cessna208b: Aircraft = {
   sims: ['msfs2020', 'msfs2024'],
   engines: { count: 1, type: 'turboprop', name: 'Pratt & Whitney Canada PT6A-140, 867 shp' },
   seats: 14,
-  accent: '#E8A33D',
   tags: ['bush', 'cargo', 'g1000', 'pt6', 'single turboprop', 'float', 'amphibian'],
   specs: [
     { label: 'Max takeoff weight', value: '8,807 lb (cargo pod)' },
@@ -282,7 +281,6 @@ export const citationCJ4: Aircraft = {
   sims: ['msfs2020', 'msfs2024'],
   engines: { count: 2, type: 'turbofan', name: '2 x Williams FJ44-4A, 3,621 lbf each' },
   seats: 10,
-  accent: '#8FA9FF',
   tags: ['bizjet', 'collins', 'pro line 21', 'fms', 'single pilot'],
   specs: [
     { label: 'Max takeoff weight', value: '17,110 lb' },
@@ -564,7 +562,6 @@ export const citationLongitude: Aircraft = {
   sims: ['msfs2020', 'msfs2024'],
   engines: { count: 2, type: 'turbofan', name: '2 x Honeywell HTF7700L, 7,665 lbf each' },
   seats: 12,
-  accent: '#A78BFA',
   tags: ['bizjet', 'g5000', 'garmin', 'super midsize', 'autothrottle'],
   specs: [
     { label: 'Max takeoff weight', value: '39,500 lb' },
@@ -802,7 +799,6 @@ export const cessna408SkyCourier: Aircraft = {
   sims: ['msfs2024'],
   engines: { count: 2, type: 'turboprop', name: '2 x Pratt & Whitney Canada PT6A-65SC, 1,100 shp each' },
   seats: 19,
-  accent: '#F2A65A',
   tags: ['freight', 'cargo', 'g1000', 'twin turboprop', 'career'],
   specs: [
     { label: 'Max takeoff weight', value: '19,000 lb' },

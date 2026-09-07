@@ -1,19 +1,19 @@
 import React, { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { engineSummary, PhaseCard } from '@/components/cards';
+import { engineSummary, PhaseRow } from '@/components/rows';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
-import { Badge, Button, Card, SectionTitle, T } from '@/components/ui';
+import { Button, Data, Label, Meter, Panel, Row, SectionHeader, Stat, T } from '@/components/ui';
 import { getAircraft, normalItemCount, SIM_LABEL } from '@/data';
 import { useProgress } from '@/state/progress';
 import { useTheme } from '@/state/settings';
-import { accentFor, RADIUS, SPACE } from '@/theme';
+import { SPACE } from '@/theme';
 
 export default function AircraftScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const progress = useProgress();
-  const { isWide } = useResponsive();
+  const { isWide, isTablet } = useResponsive();
   const aircraft = getAircraft(id);
 
   const totals = useMemo(() => {
@@ -21,10 +21,10 @@ export default function AircraftScreen() {
     const total = normalItemCount(aircraft);
     let done = 0;
     let nextPhaseId: string | undefined;
-    for (const p of aircraft.phases) {
-      const count = progress.checkedCount(aircraft.id, p.id);
+    for (const phase of aircraft.phases) {
+      const count = progress.checkedCount(aircraft.id, phase.id);
       done += count;
-      if (!nextPhaseId && count < p.items.length) nextPhaseId = p.id;
+      if (!nextPhaseId && count < phase.items.length) nextPhaseId = phase.id;
     }
     return { done, total, nextPhaseId };
   }, [aircraft, progress]);
@@ -33,8 +33,9 @@ export default function AircraftScreen() {
     return (
       <Screen>
         <View style={styles.missing}>
-          <T size={16} weight="700">
-            Aircraft not found
+          <Label>Not found</Label>
+          <T size={15} color={theme.textDim} style={{ marginTop: SPACE.sm }}>
+            No aircraft with that id.
           </T>
           <Button label="Back to fleet" onPress={() => router.replace('/')} style={{ marginTop: SPACE.lg }} />
         </View>
@@ -42,10 +43,10 @@ export default function AircraftScreen() {
     );
   }
 
-  const accent = accentFor(theme, aircraft.accent);
   const favorite = progress.isFavorite(aircraft.id);
+  const stripColumns = isTablet ? 4 : 2;
 
-  const confirmReset = () => {
+  const confirmReset = () =>
     Alert.alert(
       'Reset progress',
       `Clear every ticked item for the ${aircraft.name}?`,
@@ -55,123 +56,132 @@ export default function AircraftScreen() {
       ],
       { cancelable: true },
     );
-  };
 
   const checklists = (
-    <View style={styles.column}>
-      <SectionTitle
-        right={
-          totals.done > 0 ? (
-            <Pressable onPress={confirmReset} hitSlop={8}>
-              <T size={12} weight="600" color={theme.textDim}>
-                Reset
-              </T>
-            </Pressable>
-          ) : undefined
-        }
-      >
-        Normal procedures
-      </SectionTitle>
-      {aircraft.phases.map((phase) => (
-        <PhaseCard
-          key={phase.id}
-          phase={phase}
-          accent={accent}
-          checked={progress.checkedCount(aircraft.id, phase.id)}
-          onPress={() => router.push(`/aircraft/${aircraft.id}/${phase.id}`)}
-        />
-      ))}
-
-      {aircraft.emergency?.length ? (
-        <View style={{ marginTop: SPACE.lg }}>
-          <SectionTitle>Non-normal and emergency</SectionTitle>
-          {aircraft.emergency.map((phase) => (
-            <PhaseCard
+    <View>
+      <View style={styles.section}>
+        <SectionHeader
+          trailing={
+            totals.done > 0 ? (
+              <Pressable onPress={confirmReset} hitSlop={8} accessibilityRole="button">
+                <Label color={theme.textDim}>Reset</Label>
+              </Pressable>
+            ) : (
+              <Data size={12} color={theme.textFaint}>
+                {String(aircraft.phases.length).padStart(2, '0')}
+              </Data>
+            )
+          }
+        >
+          Normal procedures
+        </SectionHeader>
+        <Panel>
+          {aircraft.phases.map((phase, i) => (
+            <PhaseRow
               key={phase.id}
               phase={phase}
-              accent={theme.warning}
+              index={i + 1}
+              first={i === 0}
               checked={progress.checkedCount(aircraft.id, phase.id)}
               onPress={() => router.push(`/aircraft/${aircraft.id}/${phase.id}`)}
             />
           ))}
+        </Panel>
+      </View>
+
+      {aircraft.emergency?.length ? (
+        <View style={styles.section}>
+          <SectionHeader
+            trailing={
+              <Data size={12} color={theme.warning}>
+                {String(aircraft.emergency.length).padStart(2, '0')}
+              </Data>
+            }
+          >
+            Non-normal and emergency
+          </SectionHeader>
+          <Panel style={{ borderColor: theme.warning }}>
+            {aircraft.emergency.map((phase, i) => (
+              <PhaseRow
+                key={phase.id}
+                phase={phase}
+                index={i + 1}
+                first={i === 0}
+                checked={progress.checkedCount(aircraft.id, phase.id)}
+                onPress={() => router.push(`/aircraft/${aircraft.id}/${phase.id}`)}
+              />
+            ))}
+          </Panel>
         </View>
       ) : null}
     </View>
   );
 
   const reference = (
-    <View style={styles.column}>
+    <View>
       {aircraft.speeds?.length ? (
-        <View style={{ marginBottom: SPACE.lg }}>
-          <SectionTitle>Reference speeds</SectionTitle>
-          <Card>
-            {aircraft.speeds.map((s, i) => (
-              <View
-                key={`${s.label}-${i}`}
-                style={[
-                  styles.specRow,
-                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border },
-                ]}
-              >
-                <View style={{ flex: 1 }}>
+        <View style={styles.section}>
+          <SectionHeader>Reference speeds</SectionHeader>
+          <Panel>
+            {aircraft.speeds.map((speed, i) => (
+              <Row key={`${speed.label}-${i}`} first={i === 0} style={styles.dataRow}>
+                <View style={styles.grow}>
                   <T size={14} weight="600">
-                    {s.label}
+                    {speed.label}
                   </T>
-                  {s.note ? (
+                  {speed.note ? (
                     <T size={11} color={theme.textFaint} style={{ marginTop: 2 }}>
-                      {s.note}
+                      {speed.note}
                     </T>
                   ) : null}
                 </View>
-                <T size={15} weight="700" color={accent} mono>
-                  {s.value}
-                  {s.unit ? ` ${s.unit}` : ''}
-                </T>
-              </View>
+                <View style={styles.speedValue}>
+                  <Data size={15} color={theme.accent}>
+                    {speed.value}
+                  </Data>
+                  {speed.unit ? <Label color={theme.textFaint}>{speed.unit}</Label> : null}
+                </View>
+              </Row>
             ))}
-          </Card>
+          </Panel>
         </View>
       ) : null}
 
       {aircraft.specs?.length ? (
-        <View style={{ marginBottom: SPACE.lg }}>
-          <SectionTitle>Type data</SectionTitle>
-          <Card>
-            {aircraft.specs.map((s, i) => (
-              <View
-                key={`${s.label}-${i}`}
-                style={[
-                  styles.specRow,
-                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border },
-                ]}
-              >
-                <T size={14} color={theme.textDim} style={{ flex: 1 }}>
-                  {s.label}
+        <View style={styles.section}>
+          <SectionHeader>Type data</SectionHeader>
+          <Panel>
+            {aircraft.specs.map((spec, i) => (
+              <Row key={`${spec.label}-${i}`} first={i === 0} style={styles.dataRow}>
+                <T size={14} color={theme.textDim} style={styles.grow}>
+                  {spec.label}
                 </T>
-                <T size={14} weight="600" style={{ textAlign: 'right', flexShrink: 1 }}>
-                  {s.value}
+                <T size={14} weight="600" align="right" style={styles.specValue}>
+                  {spec.value}
                 </T>
-              </View>
+              </Row>
             ))}
-          </Card>
+          </Panel>
         </View>
       ) : null}
 
       {aircraft.notes?.length ? (
-        <View>
-          <SectionTitle>Notes for the sim</SectionTitle>
-          <Card>
-            {aircraft.notes.map((n, i) => (
-              <View key={i} style={styles.noteRow}>
-                <T size={14} color={accent}>
-                  {'▸'}
-                </T>
-                <T size={13} color={theme.textDim} style={{ flex: 1, lineHeight: 19 }}>
-                  {n}
-                </T>
-              </View>
+        <View style={styles.section}>
+          <SectionHeader>Notes for the sim</SectionHeader>
+          <Panel>
+            {aircraft.notes.map((note, i) => (
+              <Row key={i} first={i === 0}>
+                <View style={styles.noteRow}>
+                  <T size={13} color={theme.accent}>
+                    {'▸'}
+                  </T>
+                  <T size={13} color={theme.textDim} style={{ flex: 1, lineHeight: 19 }}>
+                    {note}
+                  </T>
+                </View>
+              </Row>
             ))}
-          </Card>
+          </Panel>
         </View>
       ) : null}
     </View>
@@ -181,7 +191,7 @@ export default function AircraftScreen() {
     <Screen>
       <Stack.Screen
         options={{
-          title: aircraft.manufacturer,
+          title: aircraft.manufacturer.toUpperCase(),
           headerRight: () => (
             <Pressable
               onPress={() => progress.toggleFavorite(aircraft.id)}
@@ -189,7 +199,7 @@ export default function AircraftScreen() {
               accessibilityRole="button"
               accessibilityLabel={favorite ? 'Remove from favourites' : 'Add to favourites'}
             >
-              <T size={18} color={favorite ? theme.caution : theme.textFaint}>
+              <T size={17} color={favorite ? theme.caution : theme.textFaint}>
                 {favorite ? '★' : '☆'}
               </T>
             </Pressable>
@@ -197,40 +207,65 @@ export default function AircraftScreen() {
         }}
       />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <ContentWidth style={styles.inner}>
-          <View style={[styles.hero, { borderColor: theme.border, backgroundColor: theme.bgElevated }]}>
-            <View style={[styles.heroStrip, { backgroundColor: accent }]} />
-            <View style={styles.heroBody}>
-              <T size={22} weight="800">
-                {aircraft.name}
-              </T>
-              <T size={13} color={theme.textDim} style={{ marginTop: 4 }}>
-                {aircraft.model} · {engineSummary(aircraft)}
-                {aircraft.engines.name ? `\n${aircraft.engines.name}` : ''}
-              </T>
-              <View style={styles.badgeRow}>
-                {aircraft.sims.map((s) => (
-                  <Badge key={s} label={SIM_LABEL[s]} color={theme.textFaint} />
-                ))}
-                {aircraft.icao ? <Badge label={aircraft.icao} color={accent} /> : null}
-                {aircraft.seats ? <Badge label={`${aircraft.seats} seats`} color={theme.textFaint} /> : null}
-              </View>
-              <View style={styles.actionRow}>
-                <Button
-                  label={totals.done === 0 ? 'Start first checklist' : 'Continue'}
-                  color={accent}
-                  onPress={() =>
-                    router.push(
-                      `/aircraft/${aircraft.id}/${totals.nextPhaseId ?? aircraft.phases[0].id}`,
-                    )
-                  }
-                  style={{ flex: 1 }}
+        <ContentWidth style={styles.body}>
+          <View style={styles.hero}>
+            <T size={22} weight="700">
+              {aircraft.name}
+            </T>
+            <T size={13} color={theme.textDim} style={{ marginTop: 3 }}>
+              {aircraft.model}
+              {aircraft.engines.name ? `  ·  ${aircraft.engines.name}` : ''}
+            </T>
+          </View>
+
+          <Panel style={styles.strip}>
+            <View style={styles.stripRow}>
+              {[
+                { label: 'Type', value: aircraft.icao ?? '—', accent: true },
+                { label: 'Powerplant', value: engineSummary(aircraft) },
+                { label: 'Seats', value: aircraft.seats ? String(aircraft.seats) : '—' },
+                {
+                  label: 'Sim',
+                  value: aircraft.sims.map((s) => SIM_LABEL[s].replace('MSFS ', '')).join(' · '),
+                },
+              ].map((cell, i) => (
+                <Stat
+                  key={cell.label}
+                  label={cell.label}
+                  value={cell.value}
+                  color={cell.accent ? theme.accent : undefined}
+                  style={[
+                    styles.stripCell,
+                    {
+                      width: stripColumns === 2 ? '50%' : '25%',
+                      borderRightWidth:
+                        (i + 1) % stripColumns === 0 ? 0 : StyleSheet.hairlineWidth,
+                      borderTopWidth: i >= stripColumns ? StyleSheet.hairlineWidth : 0,
+                      borderRightColor: theme.border,
+                      borderTopColor: theme.border,
+                    },
+                  ]}
                 />
-              </View>
-              <T size={11} color={theme.textFaint} style={{ marginTop: SPACE.sm }}>
-                {totals.done} of {totals.total} items ticked across {aircraft.phases.length} checklists
-              </T>
+              ))}
             </View>
+          </Panel>
+
+          <View style={styles.actionBlock}>
+            <View style={styles.progressLine}>
+              <Label>Progress</Label>
+              <Data size={12} color={totals.done > 0 ? theme.ok : theme.textFaint}>
+                {String(totals.done).padStart(3, '0')} / {totals.total} items
+              </Data>
+            </View>
+            <Meter value={totals.done} total={totals.total} color={theme.ok} height={3} />
+            <Button
+              label={totals.done === 0 ? 'Start first checklist' : 'Continue where you left off'}
+              color={theme.accent}
+              onPress={() =>
+                router.push(`/aircraft/${aircraft.id}/${totals.nextPhaseId ?? aircraft.phases[0].id}`)
+              }
+              style={styles.startButton}
+            />
           </View>
 
           {isWide ? (
@@ -241,7 +276,6 @@ export default function AircraftScreen() {
           ) : (
             <>
               {checklists}
-              <View style={{ height: SPACE.xl }} />
               {reference}
             </>
           )}
@@ -252,28 +286,22 @@ export default function AircraftScreen() {
 }
 
 const styles = StyleSheet.create({
+  grow: { flex: 1 },
   scroll: { paddingBottom: SPACE.xxl },
-  inner: { padding: SPACE.lg },
+  body: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.lg },
   missing: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACE.xl },
-  hero: {
-    flexDirection: 'row',
-    borderRadius: RADIUS.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-    marginBottom: SPACE.xl,
-  },
-  heroStrip: { width: 5 },
-  heroBody: { flex: 1, padding: SPACE.lg },
-  badgeRow: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.md, flexWrap: 'wrap' },
-  actionRow: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg, maxWidth: 360 },
+  hero: { marginBottom: SPACE.lg },
+  strip: { marginBottom: SPACE.lg },
+  stripRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  stripCell: { paddingVertical: SPACE.md, paddingHorizontal: SPACE.md },
+  actionBlock: { marginBottom: SPACE.xl, gap: SPACE.sm },
+  progressLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  startButton: { marginTop: SPACE.sm },
+  section: { marginBottom: SPACE.xl },
   twoPane: { flexDirection: 'row', gap: SPACE.xl },
   pane: { flex: 1 },
-  column: { width: '100%' },
-  specRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACE.md,
-    paddingVertical: SPACE.md - 2,
-  },
-  noteRow: { flexDirection: 'row', gap: SPACE.sm, paddingVertical: SPACE.sm },
+  dataRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  speedValue: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
+  specValue: { flexShrink: 1, maxWidth: '58%' },
+  noteRow: { flexDirection: 'row', gap: SPACE.sm },
 });

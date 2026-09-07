@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Screen } from '@/components/layout';
-import { Button, T } from '@/components/ui';
+import { Button, Label, T } from '@/components/ui';
 import { useTheme } from '@/state/settings';
 import { SPACE } from '@/theme';
 
@@ -12,7 +12,8 @@ export default function NotFound() {
     <Screen>
       <Stack.Screen options={{ title: 'Not found' }} />
       <View style={styles.wrap}>
-        <T size={18} weight="800">
+        <Label>404</Label>
+        <T size={18} weight="700" style={{ marginTop: SPACE.sm }}>
           Off the airway
         </T>
         <T size={14} color={theme.textDim} style={{ marginTop: SPACE.sm, textAlign: 'center' }}>

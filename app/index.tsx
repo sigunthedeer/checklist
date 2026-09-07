@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { router, Stack } from 'expo-router';
-import { AircraftCard } from '@/components/cards';
+import { router } from 'expo-router';
+import { AircraftRow } from '@/components/rows';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
-import { Chip, SearchField, SectionTitle, T } from '@/components/ui';
+import { Data, Label, Panel, SearchField, SectionHeader, Segmented, T, Tabs } from '@/components/ui';
 import {
   AIRCRAFT,
   CATEGORY_LABEL,
@@ -12,15 +12,22 @@ import {
   getAircraft,
   groupByCategory,
   normalItemCount,
-  SIM_LABEL,
+  type Aircraft,
   type AircraftCategory,
   type SimVersion,
 } from '@/data';
 import { useProgress } from '@/state/progress';
 import { useSettings, useTheme } from '@/state/settings';
-import { accentFor, SPACE } from '@/theme';
+import { SPACE } from '@/theme';
 
 type SimFilter = SimVersion | 'all';
+type CategoryFilter = AircraftCategory | 'all';
+
+const SIM_OPTIONS: { value: SimFilter; label: string }[] = [
+  { value: 'all', label: 'All sims' },
+  { value: 'msfs2020', label: 'MSFS 2020' },
+  { value: 'msfs2024', label: 'MSFS 2024' },
+];
 
 export default function FleetScreen() {
   const theme = useTheme();
@@ -29,7 +36,7 @@ export default function FleetScreen() {
   const { columns } = useResponsive();
 
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<AircraftCategory | 'all'>('all');
+  const [category, setCategory] = useState<CategoryFilter>('all');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   const results = useMemo(
@@ -47,166 +54,205 @@ export default function FleetScreen() {
   const groups = useMemo(() => {
     const grouped = groupByCategory(results);
     return CATEGORY_ORDER.map((c) => grouped.find((g) => g.category === c)).filter(
-      (g): g is { category: AircraftCategory; items: typeof AIRCRAFT } => !!g,
+      (g): g is { category: AircraftCategory; items: Aircraft[] } => !!g,
     );
   }, [results]);
 
-  // Only categories that actually have aircraft get a filter chip.
-  const availableCategories = useMemo(() => {
+  const categoryTabs = useMemo(() => {
     const present = new Set(AIRCRAFT.map((a) => a.category));
-    return CATEGORY_ORDER.filter((c) => present.has(c));
+    return [
+      { value: 'all' as CategoryFilter, label: 'All types' },
+      ...CATEGORY_ORDER.filter((c) => present.has(c)).map((c) => ({
+        value: c as CategoryFilter,
+        label: CATEGORY_LABEL[c],
+      })),
+    ];
   }, []);
 
-  const recents = useMemo(
-    () => progress.recents.map(getAircraft).filter((a): a is NonNullable<typeof a> => !!a).slice(0, 6),
-    [progress.recents],
-  );
-
-  const fractionFor = (aircraftId: string) => {
-    const aircraft = getAircraft(aircraftId);
-    if (!aircraft) return 0;
+  const fractionFor = (aircraft: Aircraft) => {
     const total = normalItemCount(aircraft);
     if (total === 0) return 0;
     const done = aircraft.phases.reduce(
-      (sum, p) => sum + progress.checkedCount(aircraftId, p.id),
+      (sum, p) => sum + progress.checkedCount(aircraft.id, p.id),
       0,
     );
     return done / total;
   };
 
-  const showGroupHeaders = category === 'all' && search.trim() === '';
+  const open = (aircraft: Aircraft) => {
+    progress.noteVisit(aircraft.id);
+    router.push(`/aircraft/${aircraft.id}`);
+  };
+
+  const unfiltered = search.trim() === '' && category === 'all' && !favoritesOnly;
+  const recents = useMemo(
+    () =>
+      unfiltered
+        ? progress.recents
+            .map(getAircraft)
+            .filter((a): a is Aircraft => !!a)
+            .slice(0, 3)
+        : [],
+    [progress.recents, unfiltered],
+  );
+
+  // On a tablet the category panels are dealt into columns, shortest first, so
+  // both sides finish at roughly the same height.
+  const dealt = useMemo(() => {
+    if (columns === 1) return [groups];
+    const buckets: { category: AircraftCategory; items: Aircraft[] }[][] = Array.from(
+      { length: columns },
+      () => [],
+    );
+    const heights = new Array(columns).fill(0);
+    for (const group of groups) {
+      const target = heights.indexOf(Math.min(...heights));
+      buckets[target].push(group);
+      heights[target] += group.items.length + 2;
+    }
+    return buckets;
+  }, [groups, columns]);
+
+  const renderGroup = (group: { category: AircraftCategory; items: Aircraft[] }) => (
+    <View key={group.category} style={styles.section}>
+      <SectionHeader
+        trailing={
+          <Data size={12} color={theme.textFaint}>
+            {String(group.items.length).padStart(2, '0')}
+          </Data>
+        }
+      >
+        {CATEGORY_LABEL[group.category]}
+      </SectionHeader>
+      <Panel>
+        {group.items.map((aircraft, i) => (
+          <AircraftRow
+            key={aircraft.id}
+            aircraft={aircraft}
+            first={i === 0}
+            favorite={progress.isFavorite(aircraft.id)}
+            onToggleFavorite={() => progress.toggleFavorite(aircraft.id)}
+            progress={fractionFor(aircraft)}
+            onPress={() => open(aircraft)}
+          />
+        ))}
+      </Panel>
+    </View>
+  );
 
   return (
     <Screen>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
+      <View style={[styles.chrome, { backgroundColor: theme.chrome, borderBottomColor: theme.border }]}>
+        <ContentWidth style={styles.chromeInner}>
+          <View style={styles.titleRow}>
+            <T size={17} weight="700" style={{ letterSpacing: 1.4 }}>
+              CHECKRIDE
+            </T>
+            <View style={styles.titleRight}>
+              <Data size={12} color={theme.textFaint}>
+                {results.length}/{AIRCRAFT.length}
+              </Data>
+              <Pressable
+                onPress={() => router.push('/settings')}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel="Settings"
+              >
+                <T size={17} color={theme.accent}>
+                  {'⚙'}
+                </T>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.searchRow}>
+            <View style={styles.flex}>
+              <SearchField
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search name, type code, avionics"
+              />
+            </View>
             <Pressable
-              onPress={() => router.push('/settings')}
-              hitSlop={12}
+              onPress={() => setFavoritesOnly((v) => !v)}
               accessibilityRole="button"
-              accessibilityLabel="Settings"
+              accessibilityState={{ selected: favoritesOnly }}
+              accessibilityLabel="Show favourites only"
+              style={({ pressed }) => [
+                styles.starButton,
+                {
+                  backgroundColor: favoritesOnly ? theme.accent : theme.surface,
+                  borderColor: favoritesOnly ? theme.accent : theme.borderStrong,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
             >
-              <T size={18} color={theme.accent}>
-                {'⚙'}
+              <T size={15} color={favoritesOnly ? (theme.dark ? theme.bg : '#FFF') : theme.textDim}>
+                {'★'}
               </T>
             </Pressable>
-          ),
-        }}
-      />
+          </View>
+
+          <Segmented
+            options={SIM_OPTIONS}
+            value={settings.simFilter}
+            onChange={(v) => set('simFilter', v)}
+            style={styles.segmented}
+          />
+        </ContentWidth>
+
+        <ContentWidth>
+          <Tabs options={categoryTabs} value={category} onChange={setCategory} />
+        </ContentWidth>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        <ContentWidth style={styles.inner}>
-          <SearchField
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search aircraft, type code, avionics"
-          />
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipRow}
-          >
-            {(['all', 'msfs2020', 'msfs2024'] as SimFilter[]).map((s) => (
-              <Chip
-                key={s}
-                label={s === 'all' ? 'All sims' : SIM_LABEL[s]}
-                active={settings.simFilter === s}
-                onPress={() => set('simFilter', s)}
-              />
-            ))}
-            <Chip
-              label="★ Favourites"
-              active={favoritesOnly}
-              onPress={() => setFavoritesOnly((v) => !v)}
-              color={theme.caution}
-            />
-          </ScrollView>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipRow}
-          >
-            <Chip label="All types" active={category === 'all'} onPress={() => setCategory('all')} />
-            {availableCategories.map((c) => (
-              <Chip
-                key={c}
-                label={CATEGORY_LABEL[c]}
-                active={category === c}
-                onPress={() => setCategory(c)}
-              />
-            ))}
-          </ScrollView>
-
-          {recents.length > 0 && search.trim() === '' && !favoritesOnly ? (
+        <ContentWidth style={styles.body}>
+          {recents.length > 0 ? (
             <View style={styles.section}>
-              <SectionTitle>Recently opened</SectionTitle>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                {recents.map((a) => (
-                  <Chip
-                    key={a.id}
-                    label={a.name}
-                    onPress={() => router.push(`/aircraft/${a.id}`)}
-                    color={accentFor(theme, a.accent)}
+              <SectionHeader>Recent</SectionHeader>
+              <Panel>
+                {recents.map((aircraft, i) => (
+                  <AircraftRow
+                    key={aircraft.id}
+                    aircraft={aircraft}
+                    first={i === 0}
+                    favorite={progress.isFavorite(aircraft.id)}
+                    onToggleFavorite={() => progress.toggleFavorite(aircraft.id)}
+                    progress={fractionFor(aircraft)}
+                    onPress={() => open(aircraft)}
                   />
                 ))}
-              </ScrollView>
+              </Panel>
             </View>
           ) : null}
 
           {results.length === 0 ? (
             <View style={styles.empty}>
-              <T size={16} weight="700" color={theme.textDim}>
-                Nothing matches
-              </T>
-              <T size={13} color={theme.textFaint} style={{ marginTop: 6, textAlign: 'center' }}>
-                Try a different search, or clear the sim and type filters.
+              <Label>No match</Label>
+              <T size={14} color={theme.textDim} style={{ marginTop: SPACE.sm, textAlign: 'center' }}>
+                Nothing in the fleet matches that. Try a different search, or widen the sim and type
+                filters.
               </T>
             </View>
+          ) : columns === 1 ? (
+            groups.map(renderGroup)
           ) : (
-            groups.map((group) => (
-              <View key={group.category} style={styles.section}>
-                {showGroupHeaders ? (
-                  <SectionTitle
-                    right={
-                      <T size={12} color={theme.textFaint}>
-                        {group.items.length}
-                      </T>
-                    }
-                  >
-                    {CATEGORY_LABEL[group.category]}
-                  </SectionTitle>
-                ) : null}
-                <View style={styles.grid}>
-                  {group.items.map((a) => (
-                    <View
-                      key={a.id}
-                      style={[styles.gridCell, { width: `${100 / columns}%` }]}
-                    >
-                      <AircraftCard
-                        aircraft={a}
-                        favorite={progress.isFavorite(a.id)}
-                        onToggleFavorite={() => progress.toggleFavorite(a.id)}
-                        progress={fractionFor(a.id)}
-                        onPress={() => {
-                          progress.noteVisit(a.id);
-                          router.push(`/aircraft/${a.id}`);
-                        }}
-                      />
-                    </View>
-                  ))}
+            <View style={styles.columns}>
+              {dealt.map((bucket, i) => (
+                <View key={i} style={styles.column}>
+                  {bucket.map(renderGroup)}
                 </View>
-              </View>
-            ))
+              ))}
+            </View>
           )}
 
           <T size={11} color={theme.textFaint} style={styles.footer}>
-            {AIRCRAFT.length} aircraft · simulator use only, not for real-world flight
+            Simulator use only. Not for real-world flight.
           </T>
         </ContentWidth>
       </ScrollView>
@@ -215,12 +261,26 @@ export default function FleetScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  chrome: { borderBottomWidth: StyleSheet.hairlineWidth },
+  chromeInner: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.sm, gap: SPACE.md },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  titleRight: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  starButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmented: { marginBottom: SPACE.sm },
   scroll: { paddingBottom: SPACE.xxl },
-  inner: { padding: SPACE.lg, gap: SPACE.md },
-  chipRow: { gap: SPACE.sm, paddingVertical: 2, paddingRight: SPACE.lg },
-  section: { marginTop: SPACE.md },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -SPACE.sm / 2 },
-  gridCell: { paddingHorizontal: SPACE.sm / 2 },
-  empty: { paddingVertical: SPACE.xxl * 2, alignItems: 'center' },
-  footer: { textAlign: 'center', marginTop: SPACE.xl },
+  body: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.lg },
+  section: { marginBottom: SPACE.xl },
+  columns: { flexDirection: 'row', gap: SPACE.lg },
+  column: { flex: 1 },
+  empty: { paddingVertical: SPACE.xxl * 2, alignItems: 'center', paddingHorizontal: SPACE.xl },
+  footer: { textAlign: 'center', marginTop: SPACE.sm },
 });

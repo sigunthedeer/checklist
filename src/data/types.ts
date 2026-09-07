@@ -52,6 +52,7 @@ export type AircraftCategory =
   | 'aerobatic'
   | 'helicopter'
   | 'glider'
+  | 'military'
   | 'vintage';
 
 export type EngineType =
@@ -89,8 +90,6 @@ export interface Aircraft {
   sims: SimVersion[];
   engines: { count: number; type: EngineType; name?: string };
   seats?: number;
-  /** Hex colour used for the aircraft's accent in lists and headers. */
-  accent: string;
   /** Extra words matched by search: avionics, nicknames, roles. */
   tags?: string[];
   specs?: Spec[];
@@ -127,6 +126,7 @@ export const CATEGORY_LABEL: Record<AircraftCategory, string> = {
   aerobatic: 'Aerobatic',
   helicopter: 'Helicopters',
   glider: 'Gliders',
+  military: 'Military',
   vintage: 'Vintage',
 };
 
@@ -140,6 +140,7 @@ export const CATEGORY_ORDER: AircraftCategory[] = [
   'aerobatic',
   'helicopter',
   'glider',
+  'military',
   'vintage',
 ];
 

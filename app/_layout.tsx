@@ -5,10 +5,10 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SystemUI from 'expo-system-ui';
-import { Button, T } from '@/components/ui';
+import { Button, Label, T } from '@/components/ui';
 import { SettingsProvider, useSettings, useTheme } from '@/state/settings';
 import { ProgressProvider } from '@/state/progress';
-import { SPACE } from '@/theme';
+import { RADIUS, SPACE } from '@/theme';
 
 export default function RootLayout() {
   return (
@@ -38,15 +38,15 @@ function Shell() {
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: theme.bgElevated },
+          headerStyle: { backgroundColor: theme.chrome },
           headerTintColor: theme.accent,
-          headerTitleStyle: { color: theme.text, fontWeight: '700' },
+          headerTitleStyle: { color: theme.text, fontWeight: '700', fontSize: 16 },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: theme.bg },
           animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Checkride' }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ title: 'Settings', presentation: 'modal' }} />
       </Stack>
       {ready && !settings.disclaimerAccepted ? (
@@ -61,8 +61,9 @@ function DisclaimerGate({ onAccept }: { onAccept: () => void }) {
   return (
     <Modal transparent animationType="fade" visible onRequestClose={onAccept}>
       <View style={[styles.backdrop, { backgroundColor: theme.overlay }]}>
-        <View style={[styles.sheet, { backgroundColor: theme.card, borderColor: theme.borderStrong }]}>
-          <T size={20} weight="800">
+        <View style={[styles.sheet, { backgroundColor: theme.surface, borderColor: theme.borderStrong }]}>
+          <Label color={theme.warning}>Read before use</Label>
+          <T size={21} weight="700" style={{ marginTop: SPACE.sm }}>
             Simulator use only
           </T>
           <ScrollView style={styles.sheetScroll}>
@@ -101,10 +102,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 520,
     maxHeight: '86%',
-    borderRadius: 18,
+    borderRadius: RADIUS.md,
     borderWidth: StyleSheet.hairlineWidth,
     padding: SPACE.xl,
   },
-  sheetScroll: { marginTop: SPACE.md },
+  sheetScroll: { marginTop: SPACE.lg },
   para: { marginBottom: SPACE.md, lineHeight: 20 },
 });

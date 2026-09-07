@@ -22,7 +22,7 @@ export interface Settings {
 }
 
 const DEFAULTS: Settings = {
-  theme: 'cockpit',
+  theme: 'slate',
   simFilter: 'all',
   keepAwake: true,
   haptics: true,
@@ -65,7 +65,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<SettingsContextValue>(
-    () => ({ settings, theme: THEMES[settings.theme] ?? THEMES.cockpit, ready, set }),
+    () => ({ settings, theme: THEMES[settings.theme] ?? THEMES.slate, ready, set }),
     [settings, ready, set],
   );
 

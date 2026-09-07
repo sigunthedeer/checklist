@@ -26,7 +26,6 @@ export const pittsS2S: Aircraft = {
   sims: ['msfs2020', 'msfs2024'],
   engines: { count: 1, type: 'piston', name: 'Lycoming AEIO-540, 260 hp' },
   seats: 1,
-  accent: '#FF6B6B',
   tags: ['biplane', 'tailwheel', 'aerobatics', 'inverted', 'competition'],
   specs: [
     { label: 'Configuration', value: 'Single seat biplane, tailwheel' },
@@ -204,7 +203,6 @@ export const extra330lt: Aircraft = {
   sims: ['msfs2020', 'msfs2024'],
   engines: { count: 1, type: 'piston', name: 'Lycoming AEIO-580, 315 hp' },
   seats: 2,
-  accent: '#FF8360',
   tags: ['aerobatics', 'unlimited', 'tailwheel', 'competition', 'inverted'],
   specs: [
     { label: 'Configuration', value: 'Two seat monoplane, tailwheel' },
@@ -366,7 +364,6 @@ export const cap10c: Aircraft = {
   sims: ['msfs2020', 'msfs2024'],
   engines: { count: 1, type: 'piston', name: 'Lycoming AEIO-360, 180 hp' },
   seats: 2,
-  accent: '#F79D65',
   tags: ['aerobatics', 'trainer', 'wooden', 'side by side', 'french'],
   specs: [
     { label: 'Configuration', value: 'Side by side, fixed tricycle gear' },

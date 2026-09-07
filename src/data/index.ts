@@ -1,19 +1,42 @@
 import type { Aircraft, AircraftCategory, SimVersion } from './types';
-import { cessna152, cessna172Classic, cessna172G1000 } from './aircraft/cessna-pistons';
+import {
+  cessna152,
+  cessna152Aerobat,
+  cessna172Classic,
+  cessna172G1000,
+} from './aircraft/cessna-pistons';
 import {
   cessna208b,
   cessna408SkyCourier,
   citationCJ4,
   citationLongitude,
 } from './aircraft/cessna-turbine';
-import { a320neo, b7478i, b78710 } from './aircraft/airliners';
-import { baronG58, bonanzaG36, cirrusSR22, da40ng, da62 } from './aircraft/pistons';
-import { airTractor802, kingAir350i, tbm930 } from './aircraft/turboprops';
-import { ctls, iconA5, savageCub, vl3, xcub } from './aircraft/light';
+import { a320neo, b744Supertanker, b7478i, b78710 } from './aircraft/airliners';
+import {
+  baronG58,
+  bonanzaG36,
+  cirrusSR22,
+  da40ng,
+  da40tdi,
+  da62,
+  dv20,
+} from './aircraft/pistons';
+import { airTractor802, kingAir350i, kingAirC90, tbm930 } from './aircraft/turboprops';
+import {
+  ctls,
+  iconA5,
+  nxcub,
+  savageCub,
+  shockUltra,
+  virusSW121,
+  vl3,
+  xcub,
+} from './aircraft/light';
 import { cap10c, extra330lt, pittsS2S } from './aircraft/aerobatic';
-import { bell407, cabriG2, h125, r22 } from './aircraft/helicopters';
-import { discus2c, dg1001e } from './aircraft/gliders';
+import { bell407, cabriG2, h125, h225, r22, r44 } from './aircraft/helicopters';
+import { discus2c, dg1001e, ls8 } from './aircraft/gliders';
 import { boeing247d } from './aircraft/vintage';
+import { c17, fa18e } from './aircraft/military';
 
 /**
  * The fleet. Adding an aircraft is a matter of writing its data file and
@@ -24,6 +47,7 @@ export const AIRCRAFT: Aircraft[] = [
   a320neo,
   b7478i,
   b78710,
+  b744Supertanker,
   // Business jets
   citationCJ4,
   citationLongitude,
@@ -31,6 +55,7 @@ export const AIRCRAFT: Aircraft[] = [
   tbm930,
   cessna208b,
   kingAir350i,
+  kingAirC90,
   cessna408SkyCourier,
   airTractor802,
   // Piston twins
@@ -43,24 +68,36 @@ export const AIRCRAFT: Aircraft[] = [
   cirrusSR22,
   bonanzaG36,
   da40ng,
+  da40tdi,
+  dv20,
   // Light sport and ultralight
   xcub,
+  nxcub,
   savageCub,
+  shockUltra,
   iconA5,
   ctls,
   vl3,
+  virusSW121,
   // Aerobatic
   pittsS2S,
   extra330lt,
   cap10c,
+  cessna152Aerobat,
   // Helicopters
   h125,
+  h225,
   bell407,
   cabriG2,
   r22,
+  r44,
   // Gliders
   dg1001e,
   discus2c,
+  ls8,
+  // Military
+  fa18e,
+  c17,
   // Vintage
   boeing247d,
 ];

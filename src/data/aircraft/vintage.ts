@@ -10,7 +10,6 @@ export const boeing247d: Aircraft = {
   sims: ['msfs2024'],
   engines: { count: 2, type: 'piston', name: '2 x Pratt & Whitney Wasp S1H1-G, 550 hp each' },
   seats: 10,
-  accent: '#C9A227',
   tags: ['vintage', 'radial', 'classic', 'airliner', '1930s', 'tailwheel', 'retractable'],
   specs: [
     { label: 'First flight', value: '1933' },
