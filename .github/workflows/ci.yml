@@ -27,6 +27,9 @@ jobs:
       - name: Validate aircraft data
         run: npm run validate:data
 
+      - name: Test
+        run: npm test
+
       # Catches an export that type-checks but cannot actually bundle.
       - name: Build web
         run: npm run build:web

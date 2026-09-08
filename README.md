@@ -23,6 +23,7 @@ npm start          # then scan the QR code with Expo Go, or press a / i / w
 | `npm run ios` | open on an iOS simulator (macOS only) |
 | `npm run web` | run in a browser, handy for quick layout checks |
 | `npm run typecheck` | TypeScript, no emit |
+| `npm test` | Jest suite over the persistence logic |
 | `npm run validate:data` | checks the dataset for duplicate ids, empty lists and blank items |
 | `npm run build:web` | builds an installable PWA into `dist/`, ready for any static host |
 
@@ -103,8 +104,25 @@ tabular values in a monospaced face, and small-caps labels above every figure.
 
 ## Checks
 
-`.github/workflows/ci.yml` runs the typecheck, the dataset validator and a full web build on every
-push. Pushes deploy straight to the host, so a broken data file has to fail there first.
+`.github/workflows/ci.yml` runs the typecheck, the dataset validator, the tests and a full web
+build on every push. Pushes deploy straight to the host, so anything broken has to fail there
+first.
+
+The tests cover the persistence layer, which is the part that fails quietly: saved ticks, user
+items and notes, favourites, recents, and the settings file. They run against an in-memory stand-in
+for AsyncStorage (`src/test/asyncStorage.ts`) that can be told to fail on demand, because the store
+is written to survive a storage layer that does.
+
+The cases worth knowing about, since each one guards a decision rather than an implementation
+detail:
+
+- Ticks on user items are keyed by id, so deleting an earlier item cannot shift the rest onto the
+  wrong rows.
+- `resetAircraft('cessna-152')` must not touch `cessna-152-aerobat`. Both are real fleet ids and
+  one is a prefix of the other.
+- A settings file naming a theme that no longer exists still yields a usable palette. The default
+  was renamed from `cockpit` to `slate` in the redesign, so older installs have exactly that.
+- Corrupt stored JSON, and a storage layer that throws, both leave the app usable.
 
 ## Adding an aircraft
 
