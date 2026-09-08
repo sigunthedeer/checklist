@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -275,10 +275,25 @@ export function Tabs<V extends string>({
   contentInset?: number;
 }) {
   const theme = useTheme();
+  const scrollRef = useRef<ScrollView>(null);
+  const layouts = useRef<Record<string, { x: number; width: number }>>({});
+  const [viewport, setViewport] = useState(0);
+
+  // The active tab is often off-screen after moving between checklists, which
+  // leaves no indication of where you are in the sequence.
+  useEffect(() => {
+    const layout = layouts.current[value];
+    if (!layout || viewport === 0) return;
+    const centred = layout.x + layout.width / 2 - viewport / 2;
+    scrollRef.current?.scrollTo({ x: Math.max(0, centred), animated: true });
+  }, [value, viewport]);
+
   return (
     <ScrollView
+      ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
+      onLayout={(e) => setViewport(e.nativeEvent.layout.width)}
       contentContainerStyle={{ paddingHorizontal: contentInset }}
       style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.border }}
     >
@@ -290,6 +305,10 @@ export function Tabs<V extends string>({
             onPress={() => onChange(option.value)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
+            onLayout={(e) => {
+              const { x, width } = e.nativeEvent.layout;
+              layouts.current[option.value] = { x, width };
+            }}
             style={({ pressed }) => [
               styles.tab,
               {
@@ -318,10 +337,12 @@ export function SearchField({
   value,
   onChangeText,
   placeholder,
+  autoFocus,
 }: {
   value: string;
   onChangeText: (v: string) => void;
   placeholder: string;
+  autoFocus?: boolean;
 }) {
   const theme = useTheme();
   return (
@@ -336,6 +357,7 @@ export function SearchField({
         placeholderTextColor={theme.textFaint}
         autoCorrect={false}
         autoCapitalize="none"
+        autoFocus={autoFocus}
         returnKeyType="search"
         clearButtonMode="while-editing"
         style={[styles.searchInput, { color: theme.text }]}

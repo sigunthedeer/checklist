@@ -89,6 +89,10 @@ tabular values in a monospaced face, and small-caps labels above every figure.
   the app, auto-scroll to the next open item, haptics, and a screen-on lock. On a wide screen the
   items flow into two columns so a whole checklist fits without scrolling, read down one column
   then down the next.
+- **Search inside a checklist**, because the airliner lists run past forty items. Matching items
+  keep their original numbers so you still know where you are, results collapse to one column, and
+  if nothing in the current checklist matches it names the ones that do and takes you there with
+  the search intact.
 - **Flights, not just ticks.** Start a flight, work the lists in order, and finishing the last one
   offers to clear the aircraft for the next flight, so you never begin pre-ticked.
 - **Your own items and notes.** Add checklist items for mod-specific steps or personal flows, and

@@ -1,3 +1,4 @@
+import { matchesAll, searchTerms } from '@/utils/search';
 import type { Aircraft, AircraftCategory, SimVersion } from './types';
 import {
   cessna152,
@@ -140,16 +141,13 @@ export interface FleetQuery {
 }
 
 export function filterFleet(query: FleetQuery): Aircraft[] {
-  const term = query.search?.trim().toLowerCase() ?? '';
-  const terms = term.length > 0 ? term.split(/\s+/) : [];
+  const terms = searchTerms(query.search ?? '');
 
   return AIRCRAFT.filter((a) => {
     if (query.sim && query.sim !== 'all' && !a.sims.includes(query.sim)) return false;
     if (query.category && query.category !== 'all' && a.category !== query.category) return false;
     if (query.favoritesOnly && !(query.favorites ?? []).includes(a.id)) return false;
-    if (terms.length === 0) return true;
-    const haystack = SEARCH_INDEX.get(a.id) ?? '';
-    return terms.every((t) => haystack.includes(t));
+    return matchesAll(SEARCH_INDEX.get(a.id) ?? '', terms);
   });
 }
 
