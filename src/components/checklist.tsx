@@ -114,6 +114,27 @@ export const ChecklistRow = memo(function ChecklistRow({
             </T>
           </View>
         ) : null}
+
+        {settings.beginnerMode && (item.where || item.why) ? (
+          <View style={[styles.learn, { borderLeftColor: theme.accentSoft }]}>
+            {item.where ? (
+              <View style={styles.learnLine}>
+                <Label color={theme.textFaint}>Where</Label>
+                <T size={12} color={theme.textDim} style={styles.learnText}>
+                  {item.where}
+                </T>
+              </View>
+            ) : null}
+            {item.why ? (
+              <View style={[styles.learnLine, item.where ? styles.learnGap : null]}>
+                <Label color={theme.textFaint}>Why</Label>
+                <T size={12} color={theme.textDim} style={styles.learnText}>
+                  {item.why}
+                </T>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </View>
 
       {onDelete ? (
@@ -162,5 +183,9 @@ const styles = StyleSheet.create({
   cond: { marginBottom: 3 },
   note: { marginTop: 4 },
   warn: { marginTop: 6, paddingLeft: SPACE.sm, borderLeftWidth: 2 },
+  learn: { marginTop: 8, paddingLeft: SPACE.sm, borderLeftWidth: 2 },
+  learnLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACE.sm },
+  learnGap: { marginTop: 3 },
+  learnText: { flex: 1, lineHeight: 17 },
   delete: { width: 22, alignItems: 'flex-end', paddingTop: 2 },
 });

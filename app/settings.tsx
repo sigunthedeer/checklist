@@ -150,6 +150,19 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.section}>
+            <SectionHeader>Learning</SectionHeader>
+            <Panel>
+              <ToggleRow
+                first
+                label="Beginner mode"
+                hint="Shows what each control is and where to find it in the cockpit, on the aircraft that have it written."
+                value={settings.beginnerMode}
+                onChange={(v) => set('beginnerMode', v)}
+              />
+            </Panel>
+          </View>
+
+          <View style={styles.section}>
             <SectionHeader>Default sim filter</SectionHeader>
             <Panel>
               <Row first>

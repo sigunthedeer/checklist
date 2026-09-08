@@ -17,6 +17,8 @@ export interface Settings {
   autoAdvance: boolean;
   /** Larger text for tablets clamped to a yoke mount or a phone across the room. */
   textScale: number;
+  /** Show what each control is and where to find it. On by default. */
+  beginnerMode: boolean;
   /** Tapping a checked item clears it instead of doing nothing. */
   disclaimerAccepted: boolean;
 }
@@ -28,6 +30,7 @@ const DEFAULTS: Settings = {
   haptics: true,
   autoAdvance: true,
   textScale: 1,
+  beginnerMode: true,
   disclaimerAccepted: false,
 };
 

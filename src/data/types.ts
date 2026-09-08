@@ -7,6 +7,10 @@
  *   note extra guidance shown under the item in smaller text
  *   warn caution / warning, shown in the caution colour
  *   cond condition prefix for a conditional item, e.g. "IF ICING IS PRESENT"
+ *
+ * `where` and `why` are the beginner layer, hidden unless beginner mode is on.
+ * They are written only where they genuinely help; padding every item with
+ * filler would bury the ones that matter.
  */
 export interface ChecklistItem {
   c: string;
@@ -14,6 +18,10 @@ export interface ChecklistItem {
   note?: string;
   warn?: string;
   cond?: string;
+  /** Where the control physically sits in the cockpit. */
+  where?: string;
+  /** What the thing is, and why the step exists at all. */
+  why?: string;
 }
 
 /** Broad phase grouping. Drives ordering, icon and accent colour. */
@@ -100,6 +108,8 @@ export interface Aircraft {
   emergency?: ChecklistPhase[];
   /** Sim-specific tips: quirks of the model, keybinds, known bugs. */
   notes?: string[];
+  /** How the cockpit is laid out, for someone new to the type. Beginner mode only. */
+  orientation?: string[];
 }
 
 export const PHASE_ORDER: PhaseKind[] = [

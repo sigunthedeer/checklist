@@ -10,7 +10,7 @@ import { getAircraft, SIM_LABEL } from '@/data';
 import type { ChecklistPhase } from '@/data';
 import { useProgress } from '@/state/progress';
 import { useCustom } from '@/state/custom';
-import { useTheme } from '@/state/settings';
+import { useSettings, useTheme } from '@/state/settings';
 import { SPACE } from '@/theme';
 
 export default function AircraftScreen() {
@@ -19,6 +19,7 @@ export default function AircraftScreen() {
   const progress = useProgress();
   const custom = useCustom();
   const confirm = useConfirm();
+  const { settings } = useSettings();
   const { isWide, isTablet } = useResponsive();
   const aircraft = getAircraft(id);
 
@@ -184,6 +185,26 @@ export default function AircraftScreen() {
                 <T size={14} weight="600" align="right" style={styles.specValue}>
                   {spec.value}
                 </T>
+              </Row>
+            ))}
+          </Panel>
+        </View>
+      ) : null}
+
+      {settings.beginnerMode && aircraft.orientation?.length ? (
+        <View style={styles.section}>
+          <SectionHeader>Finding your way around</SectionHeader>
+          <Panel>
+            {aircraft.orientation.map((line, i) => (
+              <Row key={i} first={i === 0}>
+                <View style={styles.noteRow}>
+                  <T size={13} color={theme.accent}>
+                    {'▸'}
+                  </T>
+                  <T size={13} color={theme.textDim} style={{ flex: 1, lineHeight: 19 }}>
+                    {line}
+                  </T>
+                </View>
               </Row>
             ))}
           </Panel>

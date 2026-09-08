@@ -100,8 +100,14 @@ tabular values in a monospaced face, and small-caps labels above every figure.
 - **Your own items and notes.** Add checklist items for mod-specific steps or personal flows, and
   keep free-text notes per aircraft. Both are stored on the device against stable ids, so they
   survive updates to the built-in checklists.
+- **Beginner mode**, on by default, which adds *where* a control physically sits in the cockpit and
+  *why* the step exists, plus a panel-by-panel orientation on the aircraft page. Written only where
+  it genuinely helps rather than padding every item, and currently covering the 152 and the 172
+  G1000, the two aircraft people actually learn on. Turn it off in Settings for a clean EFB.
+- **Backups.** Your own items, notes, favourites and progress export to a file and restore from one.
+  All of it otherwise lives in per-origin browser storage that the OS can clear without warning.
 - **Three themes**: Slate (dark, cyan accent), Night (red on black, to protect dark adaptation),
-  and Day. Four text sizes for a tablet clamped to a yoke mount.
+  and Day, all meeting WCAG AA for text. Four text sizes for a tablet clamped to a yoke mount.
 
 ## Checks
 
@@ -137,6 +143,10 @@ implementation detail:
    for the shape and what each field means). Colour is entirely theme-driven, so there is nothing
    per-aircraft to choose.
 2. Import it in `src/data/index.ts` and add it to the `AIRCRAFT` array.
+
+To extend the beginner layer, add `where` and `why` to individual items and an `orientation` array
+to the aircraft. Both are optional and hidden unless beginner mode is on, so partial coverage is
+fine: write them where they help and leave the rest alone.
 
 That is the whole job. Every screen is driven off that array, so the new type appears in search,
 the category groups, the filters and the progress tracking with no further wiring.
