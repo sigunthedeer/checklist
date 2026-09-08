@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { engineSummary, PhaseRow } from '@/components/rows';
+import { SpeedsTable } from '@/components/speeds';
+import { useConfirm } from '@/components/confirm';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
 import { Button, Data, Label, Meter, Panel, Row, SectionHeader, Stat, T } from '@/components/ui';
 import { getAircraft, SIM_LABEL } from '@/data';
@@ -16,6 +18,7 @@ export default function AircraftScreen() {
   const theme = useTheme();
   const progress = useProgress();
   const custom = useCustom();
+  const confirm = useConfirm();
   const { isWide, isTablet } = useResponsive();
   const aircraft = getAircraft(id);
 
@@ -67,18 +70,18 @@ export default function AircraftScreen() {
   };
 
   // Only worth confirming when there is something to lose.
-  const newFlight = () =>
-    totals.done === 0
-      ? startNewFlight()
-      : Alert.alert(
-          'New flight',
-          `Clear every ticked item for the ${aircraft.name} and start at the first checklist?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'New flight', style: 'destructive', onPress: startNewFlight },
-          ],
-          { cancelable: true },
-        );
+  const newFlight = async () => {
+    if (totals.done > 0) {
+      const confirmed = await confirm({
+        title: 'Start a new flight?',
+        message: `This clears every ticked item for the ${aircraft.name} and starts at the first checklist.`,
+        confirmLabel: 'New flight',
+        destructive: true,
+      });
+      if (!confirmed) return;
+    }
+    startNewFlight();
+  };
 
   const checklists = (
     <View>
@@ -165,28 +168,7 @@ export default function AircraftScreen() {
       {aircraft.speeds?.length ? (
         <View style={styles.section}>
           <SectionHeader>Reference speeds</SectionHeader>
-          <Panel>
-            {aircraft.speeds.map((speed, i) => (
-              <Row key={`${speed.label}-${i}`} first={i === 0} style={styles.dataRow}>
-                <View style={styles.grow}>
-                  <T size={14} weight="600">
-                    {speed.label}
-                  </T>
-                  {speed.note ? (
-                    <T size={11} color={theme.textFaint} style={{ marginTop: 2 }}>
-                      {speed.note}
-                    </T>
-                  ) : null}
-                </View>
-                <View style={styles.speedValue}>
-                  <Data size={15} color={theme.accent}>
-                    {speed.value}
-                  </Data>
-                  {speed.unit ? <Label color={theme.textFaint}>{speed.unit}</Label> : null}
-                </View>
-              </Row>
-            ))}
-          </Panel>
+          <SpeedsTable speeds={aircraft.speeds} />
         </View>
       ) : null}
 
@@ -351,7 +333,6 @@ const styles = StyleSheet.create({
   twoPane: { flexDirection: 'row', gap: SPACE.xl },
   pane: { flex: 1 },
   dataRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
-  speedValue: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   specValue: { flexShrink: 1, maxWidth: '58%' },
   noteRow: { flexDirection: 'row', gap: SPACE.sm },
   notes: { minHeight: 84, fontSize: 14, lineHeight: 20, textAlignVertical: 'top', padding: 0 },

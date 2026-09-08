@@ -38,7 +38,12 @@ interface CustomContextValue {
   setNote: (aircraftId: string, text: string) => void;
   /** Number of user items across an aircraft, for the "yours" count on its page. */
   countForAircraft: (aircraftId: string) => number;
+  /** Whole-state access, for backup and restore. */
+  exportData: () => PersistedState;
+  importData: (data: PersistedState) => void;
 }
+
+export type CustomData = PersistedState;
 
 const CustomContext = createContext<CustomContextValue | null>(null);
 
@@ -109,6 +114,8 @@ export function CustomProvider({ children }: { children: React.ReactNode }) {
           else notes[aircraftId] = text;
           return { ...prev, notes };
         }),
+      exportData: () => state,
+      importData: (data) => update(() => data),
       countForAircraft: (aircraftId) => {
         const prefix = `${aircraftId}/`;
         return Object.entries(state.items).reduce(

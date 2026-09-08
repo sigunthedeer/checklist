@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { ChecklistRow } from '@/components/checklist';
+import { SpeedsTable } from '@/components/speeds';
+import { useConfirm } from '@/components/confirm';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
 import {
   Button,
@@ -37,6 +39,7 @@ export default function ChecklistScreen() {
   const { settings } = useSettings();
   const progress = useProgress();
   const custom = useCustom();
+  const confirm = useConfirm();
   const { width } = useResponsive();
 
   const aircraft = getAircraft(id);
@@ -49,6 +52,7 @@ export default function ChecklistScreen() {
   const [scrollY, setScrollY] = useState(0);
   const [searching, setSearching] = useState(!!q);
   const [query, setQuery] = useState(q ?? '');
+  const [showSpeeds, setShowSpeeds] = useState(false);
   const [adding, setAdding] = useState(false);
   const [draftChallenge, setDraftChallenge] = useState('');
   const [draftResponse, setDraftResponse] = useState('');
@@ -259,6 +263,18 @@ export default function ChecklistScreen() {
           title: phase.name,
           headerRight: () => (
             <View style={styles.headerActions}>
+              {aircraft.speeds?.length ? (
+                <Pressable
+                  onPress={() => setShowSpeeds(true)}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reference speeds"
+                >
+                  <Data size={13} color={theme.textDim}>
+                    V
+                  </Data>
+                </Pressable>
+              ) : null}
               <Pressable
                 onPress={() => {
                   setSearching((open) => !open);
@@ -410,21 +426,15 @@ export default function ChecklistScreen() {
                   accent={accent}
                   checked={progress.isCustomChecked(aircraft.id, phase.id, item.id)}
                   onToggle={() => onToggleCustom(item.id)}
-                  onDelete={() =>
-                    Alert.alert(
-                      'Delete item',
-                      `Remove "${item.c}" from this checklist?`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Delete',
-                          style: 'destructive',
-                          onPress: () => custom.removeItem(aircraft.id, phase.id, item.id),
-                        },
-                      ],
-                      { cancelable: true },
-                    )
-                  }
+                  onDelete={async () => {
+                    const confirmed = await confirm({
+                      title: 'Delete this item?',
+                      message: `"${item.c}" will be removed from ${phase.name}.`,
+                      confirmLabel: 'Delete',
+                      destructive: true,
+                    });
+                    if (confirmed) custom.removeItem(aircraft.id, phase.id, item.id);
+                  }}
                 />
               ))}
               {terms.length === 0 ? (
@@ -533,6 +543,33 @@ export default function ChecklistScreen() {
           )}
         </ContentWidth>
       </View>
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showSpeeds}
+        onRequestClose={() => setShowSpeeds(false)}
+      >
+        <View style={[styles.backdrop, { backgroundColor: theme.overlay }]}>
+          <View
+            style={[styles.sheet, styles.speedsSheet, { backgroundColor: theme.surface, borderColor: theme.borderStrong }]}
+          >
+            <Label>Reference speeds</Label>
+            <T size={17} weight="700" style={{ marginTop: 2 }} numberOfLines={1}>
+              {aircraft.name}
+            </T>
+            <ScrollView style={styles.speedsScroll}>
+              <SpeedsTable speeds={aircraft.speeds ?? []} />
+            </ScrollView>
+            <Button
+              label="Close"
+              variant="quiet"
+              onPress={() => setShowSpeeds(false)}
+              style={{ marginTop: SPACE.lg }}
+            />
+          </View>
+        </View>
+      </Modal>
+
       <Modal
         transparent
         animationType="fade"
@@ -648,4 +685,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   sheetActions: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.xl },
+  speedsSheet: { maxHeight: '82%' },
+  speedsScroll: { marginTop: SPACE.lg },
 });

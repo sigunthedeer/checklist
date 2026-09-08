@@ -1,11 +1,20 @@
-import React from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, Platform, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 import { ContentWidth, Screen } from '@/components/layout';
 import { Button, Data, Label, Panel, Row, SectionHeader, Segmented, T, Toggle } from '@/components/ui';
 import { AIRCRAFT, SIM_LABEL } from '@/data';
 import { useProgress } from '@/state/progress';
+import { useConfirm } from '@/components/confirm';
+import { useCustom } from '@/state/custom';
+import {
+  BACKUP_FILENAME,
+  BackupError,
+  buildBackup,
+  describeBackup,
+  parseBackup,
+} from '@/utils/backup';
 import { useSettings, useTheme } from '@/state/settings';
-import { SPACE, THEME_HINT, THEME_LABEL, THEMES, type ThemeName } from '@/theme';
+import { RADIUS, SPACE, THEME_HINT, THEME_LABEL, THEMES, type ThemeName } from '@/theme';
 
 const TEXT_SCALES = [
   { value: '0.9', label: 'S' },
@@ -28,17 +37,78 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const { settings, set } = useSettings();
   const progress = useProgress();
+  const custom = useCustom();
+  const confirm = useConfirm();
+  const [pasting, setPasting] = useState(false);
+  const [pasted, setPasted] = useState('');
+  const [problem, setProblem] = useState<string | null>(null);
 
-  const confirmResetAll = () =>
-    Alert.alert(
-      'Reset all progress',
-      'Clear every ticked item for every aircraft? Favourites are kept.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset everything', style: 'destructive', onPress: () => progress.resetAll() },
-      ],
-      { cancelable: true },
-    );
+  const exportBackup = async () => {
+    const json = buildBackup(progress.exportData(), custom.exportData());
+    if (Platform.OS === 'web') {
+      // A real file download, so it lands somewhere the OS will not evict.
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = BACKUP_FILENAME;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    await Share.share({ message: json, title: 'Checkride backup' });
+  };
+
+  const restore = async (text: string) => {
+    let backup;
+    try {
+      backup = parseBackup(text);
+    } catch (error) {
+      setProblem(error instanceof BackupError ? error.message : 'That backup could not be read.');
+      return;
+    }
+    const confirmed = await confirm({
+      title: 'Restore this backup?',
+      message: `This replaces everything on this device with ${describeBackup(backup)}.`,
+      confirmLabel: 'Restore',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    progress.importData(backup.progress);
+    custom.importData(backup.custom);
+    setPasting(false);
+    setPasted('');
+    setProblem(null);
+  };
+
+  const importBackup = () => {
+    setProblem(null);
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json,.json';
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (file) await restore(await file.text());
+      };
+      input.click();
+      return;
+    }
+    setPasting(true);
+  };
+
+  const confirmResetAll = async () => {
+    const confirmed = await confirm({
+      title: 'Reset all progress?',
+      message:
+        'Clears every ticked item for every aircraft. Your favourites, notes and your own items are kept.',
+      confirmLabel: 'Reset everything',
+      destructive: true,
+    });
+    if (confirmed) progress.resetAll();
+  };
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
@@ -144,6 +214,40 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.section}>
+            <SectionHeader>Your data</SectionHeader>
+            <Panel>
+              <Row first>
+                <T size={13} color={theme.textDim} style={{ lineHeight: 19 }}>
+                  Your own items, notes, favourites and progress live only on this device, and the
+                  browser can clear that storage without warning. A backup file is the only way to
+                  move them to another device or get them back afterwards.
+                </T>
+              </Row>
+              <Row>
+                <View style={styles.dataActions}>
+                  <Button
+                    label="Export a backup"
+                    variant="outline"
+                    onPress={exportBackup}
+                    style={styles.dataAction}
+                  />
+                  <Button
+                    label="Restore"
+                    variant="quiet"
+                    onPress={importBackup}
+                    style={styles.dataAction}
+                  />
+                </View>
+                {problem ? (
+                  <T size={12} color={theme.warning} style={{ marginTop: SPACE.md }}>
+                    {problem}
+                  </T>
+                ) : null}
+              </Row>
+            </Panel>
+          </View>
+
+          <View style={styles.section}>
             <SectionHeader>About</SectionHeader>
             <Panel>
               <Row first>
@@ -169,6 +273,49 @@ export default function SettingsScreen() {
           </View>
         </ContentWidth>
       </ScrollView>
+
+      <Modal transparent animationType="fade" visible={pasting} onRequestClose={() => setPasting(false)}>
+        <View style={[styles.backdrop, { backgroundColor: theme.overlay }]}>
+          <View style={[styles.sheet, { backgroundColor: theme.surface, borderColor: theme.borderStrong }]}>
+            <Label>Restore a backup</Label>
+            <T size={13} color={theme.textDim} style={{ marginTop: SPACE.sm, lineHeight: 19 }}>
+              Paste the contents of a Checkride backup file.
+            </T>
+            <TextInput
+              value={pasted}
+              onChangeText={setPasted}
+              placeholder="{ &quot;app&quot;: &quot;checkride&quot;, … }"
+              placeholderTextColor={theme.textFaint}
+              multiline
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={[styles.pasteBox, { color: theme.text, borderColor: theme.borderStrong }]}
+            />
+            {problem ? (
+              <T size={12} color={theme.warning} style={{ marginTop: SPACE.sm }}>
+                {problem}
+              </T>
+            ) : null}
+            <View style={styles.dataActions}>
+              <Button
+                label="Cancel"
+                variant="quiet"
+                onPress={() => {
+                  setPasting(false);
+                  setProblem(null);
+                }}
+                style={styles.dataAction}
+              />
+              <Button
+                label="Restore"
+                disabled={pasted.trim() === ''}
+                onPress={() => restore(pasted)}
+                style={styles.dataAction}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -219,4 +366,23 @@ const styles = StyleSheet.create({
   toggleText: { flex: 1 },
   statRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   para: { marginBottom: SPACE.md, lineHeight: 19 },
+  dataActions: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.md },
+  dataAction: { flex: 1 },
+  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACE.xl },
+  sheet: {
+    width: '100%',
+    maxWidth: 460,
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: SPACE.xl,
+  },
+  pasteBox: {
+    marginTop: SPACE.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: RADIUS.sm,
+    padding: SPACE.md,
+    minHeight: 120,
+    fontSize: 13,
+    textAlignVertical: 'top',
+  },
 });

@@ -41,7 +41,12 @@ interface ProgressContextValue {
   toggleFavorite: (aircraftId: string) => void;
   recents: string[];
   noteVisit: (aircraftId: string) => void;
+  /** Whole-state access, for backup and restore. */
+  exportData: () => PersistedState;
+  importData: (data: PersistedState) => void;
 }
+
+export type ProgressData = PersistedState;
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
 
@@ -173,6 +178,8 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
             ? prev
             : { ...prev, recents: [a, ...prev.recents.filter((x) => x !== a)].slice(0, MAX_RECENTS) },
         ),
+      exportData: () => state,
+      importData: (data) => update(() => data),
     };
   }, [state, ready, update]);
 

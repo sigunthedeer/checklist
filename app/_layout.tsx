@@ -9,6 +9,7 @@ import { Button, Label, T } from '@/components/ui';
 import { SettingsProvider, useSettings, useTheme } from '@/state/settings';
 import { ProgressProvider } from '@/state/progress';
 import { CustomProvider } from '@/state/custom';
+import { ConfirmProvider } from '@/components/confirm';
 import { RADIUS, SPACE } from '@/theme';
 
 export default function RootLayout() {
@@ -18,7 +19,9 @@ export default function RootLayout() {
         <SettingsProvider>
           <ProgressProvider>
             <CustomProvider>
-              <Shell />
+              <ConfirmProvider>
+                <Shell />
+              </ConfirmProvider>
             </CustomProvider>
           </ProgressProvider>
         </SettingsProvider>
