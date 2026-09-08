@@ -1,4 +1,5 @@
 {
+  "_comment": "Compiles the dataset to CommonJS for Node. Deliberately has no path aliases: anything under src/data must use relative imports so it can run here as well as in the app bundle.",
   "compilerOptions": {
     "strict": true,
     "ignoreDeprecations": "6.0",

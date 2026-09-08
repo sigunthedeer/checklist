@@ -1,4 +1,4 @@
-import { matchesAll, searchTerms } from '@/utils/search';
+import { matchesAll, searchTerms } from '../utils/search';
 import type { Aircraft, AircraftCategory, SimVersion } from './types';
 import {
   cessna152,
