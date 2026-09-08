@@ -24,6 +24,7 @@ npm start          # then scan the QR code with Expo Go, or press a / i / w
 | `npm run web` | run in a browser, handy for quick layout checks |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm test` | Jest suite over the persistence logic |
+| `npm run smoke -- <url>` | checks a deployed build over HTTP |
 | `npm run validate:data` | checks the dataset for duplicate ids, empty lists and blank items |
 | `npm run build:web` | builds an installable PWA into `dist/`, ready for any static host |
 
@@ -113,8 +114,14 @@ items and notes, favourites, recents, and the settings file. They run against an
 for AsyncStorage (`src/test/asyncStorage.ts`) that can be told to fail on demand, because the store
 is written to survive a storage layer that does.
 
-The cases worth knowing about, since each one guards a decision rather than an implementation
-detail:
+A separate `smoke` job then checks the deployed site, because the SPA rewrite, the content types
+and the PWA paths are host behaviour that a local build cannot prove. It treats an
+authentication-protected deployment as "cannot check" rather than as a failure, and reads the URL
+from a `DEPLOY_URL` repository variable so it can be pointed elsewhere without touching the
+workflow.
+
+The unit tests' cases are worth knowing about, since each one guards a decision rather than an
+implementation detail:
 
 - Ticks on user items are keyed by id, so deleting an earlier item cannot shift the rest onto the
   wrong rows.

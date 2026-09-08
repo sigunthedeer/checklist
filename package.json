@@ -11,7 +11,8 @@
     "lint": "expo lint",
     "validate:data": "tsc -p scripts/tsconfig.json && node .validate/scripts/validate-data.js",
     "build:web": "expo export -p web --output-dir dist --clear && node scripts/finalize-web.mjs dist",
-    "test": "jest"
+    "test": "jest",
+    "smoke": "node scripts/smoke-deploy.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "^57.0.15",

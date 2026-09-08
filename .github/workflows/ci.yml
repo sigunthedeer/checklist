@@ -33,3 +33,19 @@ jobs:
       # Catches an export that type-checks but cannot actually bundle.
       - name: Build web
         run: npm run build:web
+
+  # The deployed site is the only place the SPA rewrite, the content types and the
+  # PWA paths can actually be proven. Runs after the build checks pass.
+  smoke:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Smoke test the deployment
+        run: node scripts/smoke-deploy.mjs "${{ vars.DEPLOY_URL || 'https://checklist-rkhv.vercel.app' }}"
