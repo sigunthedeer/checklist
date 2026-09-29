@@ -11,6 +11,7 @@ export const tbm930: Aircraft = {
   engines: { count: 1, type: 'turboprop', name: 'Pratt & Whitney Canada PT6A-66D, 850 shp' },
   seats: 6,
   tags: ['g3000', 'garmin', 'single turboprop', 'pressurised', 'fast', 'pt6'],
+  avionics: 'garmin-touch',
   specs: [
     { label: 'Max takeoff weight', value: '7,394 lb' },
     { label: 'Max cruise', value: '330 kt TAS' },
@@ -46,7 +47,7 @@ export const tbm930: Aircraft = {
         { c: 'Fuel quantity', r: 'CHECKED AND BALANCED' },
         { c: 'CAS messages', r: 'REVIEWED' },
         { c: 'Oxygen', r: 'CHECKED' },
-        { c: 'Flight plan', r: 'ENTERED' },
+        { c: 'Flight plan', r: 'ENTERED', guide: 'flight-plan' },
       ],
     },
     {
@@ -671,6 +672,7 @@ export const kingAirC90: Aircraft = {
   engines: { count: 2, type: 'turboprop', name: '2 x Pratt & Whitney Canada PT6A-135A, 550 shp each' },
   seats: 7,
   tags: ['twin turboprop', 'g1000', 'pressurised', 'pt6', 'light twin'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '10,485 lb' },
     { label: 'Max cruise', value: '272 kt TAS' },
@@ -703,7 +705,7 @@ export const kingAirC90: Aircraft = {
         { c: 'Battery', r: 'ON, 24 V MINIMUM' },
         { c: 'Fuel quantity', r: 'CHECKED' },
         { c: 'Annunciators', r: 'TEST' },
-        { c: 'Flight plan', r: 'ENTERED' },
+        { c: 'Flight plan', r: 'ENTERED', guide: 'flight-plan' },
       ],
     },
     {

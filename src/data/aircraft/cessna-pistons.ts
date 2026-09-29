@@ -377,6 +377,7 @@ export const cessna172G1000: Aircraft = {
   engines: { count: 1, type: 'piston', name: 'Lycoming IO-360-L2A, 180 hp' },
   seats: 4,
   tags: ['trainer', 'g1000', 'garmin', 'glass', 'fuel injected', 'gfc 700'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '2,550 lb' },
     { label: 'Usable fuel', value: '53 US gal' },
@@ -490,7 +491,7 @@ export const cessna172G1000: Aircraft = {
           why: 'AHRS is the attitude and heading reference, ADC the air data computer. A red X means that source is not working, and both need a short alignment before the display can be trusted.',
         },
         { c: 'Altimeter (BARO)', r: 'SET' },
-        { c: 'Flight plan', r: 'LOADED AND ACTIVATED' },
+        { c: 'Flight plan', r: 'LOADED AND ACTIVATED', guide: 'flight-plan' },
         { c: 'Fuel on board (FUEL REM)', r: 'ENTERED' },
         { c: 'Radios', r: 'SET' },
         { c: 'Transponder', r: 'SET, STANDBY' },
@@ -713,6 +714,7 @@ export const cessna172Classic: Aircraft = {
   engines: { count: 1, type: 'piston', name: 'Lycoming O-320, 160 hp (carburetted)' },
   seats: 4,
   tags: ['trainer', 'steam gauges', 'analog', 'carburettor', 'carb heat', 'gns 530'],
+  avionics: 'garmin-gns',
   specs: [
     { label: 'Max takeoff weight', value: '2,300 lb' },
     { label: 'Usable fuel', value: '40 US gal' },

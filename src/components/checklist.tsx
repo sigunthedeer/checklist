@@ -16,6 +16,7 @@ export const ChecklistRow = memo(function ChecklistRow({
   accent,
   first,
   label,
+  onGuide,
   onDelete,
 }: {
   item: ChecklistItem;
@@ -26,6 +27,8 @@ export const ChecklistRow = memo(function ChecklistRow({
   first?: boolean;
   /** Shown instead of the item number, e.g. a marker for a user's own item. */
   label?: string;
+  /** When given, the row links to the FMS procedure that explains the item. */
+  onGuide?: () => void;
   /** When given, a delete control appears at the end of the row. */
   onDelete?: () => void;
 }) {
@@ -38,6 +41,7 @@ export const ChecklistRow = memo(function ChecklistRow({
       onPress={onToggle}
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
+      aria-checked={checked}
       accessibilityLabel={`${item.c}, ${item.r}`}
       style={({ pressed }) => [
         styles.row,
@@ -115,6 +119,21 @@ export const ChecklistRow = memo(function ChecklistRow({
           </View>
         ) : null}
 
+        {onGuide ? (
+          <Pressable
+            onPress={onGuide}
+            hitSlop={8}
+            accessibilityRole="link"
+            accessibilityLabel={`How to: ${item.c}`}
+            style={({ pressed }) => [
+              styles.guide,
+              { borderColor: theme.accentSoft, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Label color={theme.accent}>How to  ›</Label>
+          </Pressable>
+        ) : null}
+
         {settings.beginnerMode && (item.where || item.why) ? (
           <View style={[styles.learn, { borderLeftColor: theme.accentSoft }]}>
             {item.where ? (
@@ -183,6 +202,14 @@ const styles = StyleSheet.create({
   cond: { marginBottom: 3 },
   note: { marginTop: 4 },
   warn: { marginTop: 6, paddingLeft: SPACE.sm, borderLeftWidth: 2 },
+  guide: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: RADIUS.xs,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   learn: { marginTop: 8, paddingLeft: SPACE.sm, borderLeftWidth: 2 },
   learnLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACE.sm },
   learnGap: { marginTop: 3 },

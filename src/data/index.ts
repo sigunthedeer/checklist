@@ -1,5 +1,6 @@
 import { matchesAll, searchTerms } from '../utils/search';
-import type { Aircraft, AircraftCategory, SimVersion } from './types';
+import type { Aircraft, AircraftCategory, Avionics, FmsProcedure, SimVersion } from './types';
+import { AVIONICS } from './fms';
 import {
   cessna152,
   cessna152Aerobat,
@@ -160,6 +161,33 @@ export function groupByCategory(list: Aircraft[]): { category: AircraftCategory;
     else buckets.set(a.category, [a]);
   }
   return [...buckets.entries()].map(([category, items]) => ({ category, items }));
+}
+
+/* ---------------------------------------------------------------- FMS guides */
+
+export { AVIONICS };
+
+const AVIONICS_BY_ID = new Map(AVIONICS.map((u) => [u.id, u]));
+
+export function getAvionics(id: string | undefined): Avionics | undefined {
+  return id ? AVIONICS_BY_ID.get(id) : undefined;
+}
+
+export function getProcedure(unit: Avionics, procedureId: string | undefined): FmsProcedure | undefined {
+  return procedureId ? unit.procedures.find((p) => p.id === procedureId) : undefined;
+}
+
+/** The aircraft whose FMS guide is this unit, in fleet order. */
+export function aircraftUsing(unitId: string): Aircraft[] {
+  return AIRCRAFT.filter((a) => a.avionics === unitId);
+}
+
+const LSK = /^LSK [1-6][LR]$/;
+
+/** Whether a step's key token names a real key on this unit. */
+export function isKnownKey(unit: Avionics, key: string): boolean {
+  if (LSK.test(key)) return !!unit.lsk;
+  return unit.keys.includes(key);
 }
 
 export * from './types';

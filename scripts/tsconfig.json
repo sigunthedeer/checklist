@@ -13,5 +13,6 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["./validate-data.ts", "../src/data/**/*.ts"]
+  "include": ["./validate-data.ts", "../src/data/**/*.ts"],
+  "exclude": ["../src/**/*.test.ts"]
 }

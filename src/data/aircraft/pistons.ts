@@ -11,6 +11,7 @@ export const cirrusSR22: Aircraft = {
   engines: { count: 1, type: 'piston', name: 'Continental IO-550-N, 310 hp' },
   seats: 5,
   tags: ['caps', 'parachute', 'perspective', 'g1000', 'side stick', 'composite'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '3,600 lb' },
     { label: 'Usable fuel', value: '92 US gal' },
@@ -92,7 +93,7 @@ export const cirrusSR22: Aircraft = {
       items: [
         { c: 'PFD and MFD', r: 'INITIALISED, NO RED X' },
         { c: 'Altimeter', r: 'SET' },
-        { c: 'Flight plan', r: 'LOADED' },
+        { c: 'Flight plan', r: 'LOADED', guide: 'flight-plan' },
         { c: 'Fuel on board', r: 'ENTERED' },
         { c: 'Lights', r: 'AS REQUIRED' },
         { c: 'Brakes', r: 'CHECK' },
@@ -265,6 +266,7 @@ export const bonanzaG36: Aircraft = {
   engines: { count: 1, type: 'piston', name: 'Continental IO-550-B, 300 hp' },
   seats: 6,
   tags: ['retractable', 'g1000', 'complex', 'constant speed', 'v tail family'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '3,650 lb' },
     { label: 'Usable fuel', value: '74 US gal' },
@@ -335,7 +337,7 @@ export const bonanzaG36: Aircraft = {
       items: [
         { c: 'Flight instruments', r: 'CHECKED AND SET' },
         { c: 'Altimeter', r: 'SET' },
-        { c: 'Flight plan', r: 'LOADED' },
+        { c: 'Flight plan', r: 'LOADED', guide: 'flight-plan' },
         { c: 'Lights', r: 'AS REQUIRED' },
         { c: 'Brakes', r: 'CHECK' },
       ],
@@ -493,6 +495,7 @@ export const baronG58: Aircraft = {
   engines: { count: 2, type: 'piston', name: '2 x Continental IO-550-C, 300 hp each' },
   seats: 6,
   tags: ['twin', 'multi engine', 'g1000', 'retractable', 'blue line', 'vmc'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '5,500 lb' },
     { label: 'Usable fuel', value: '194 US gal' },
@@ -566,7 +569,7 @@ export const baronG58: Aircraft = {
       items: [
         { c: 'Flight instruments', r: 'CHECKED AND SET' },
         { c: 'Altimeter', r: 'SET' },
-        { c: 'Flight plan', r: 'LOADED' },
+        { c: 'Flight plan', r: 'LOADED', guide: 'flight-plan' },
         { c: 'Lights', r: 'AS REQUIRED' },
         { c: 'Brakes', r: 'CHECK BOTH SIDES' },
       ],
@@ -736,6 +739,7 @@ export const da40ng: Aircraft = {
   engines: { count: 1, type: 'piston', name: 'Austro AE300 turbo diesel, 168 hp' },
   seats: 4,
   tags: ['diesel', 'jet a', 'fadec', 'single lever', 'g1000', 'composite', 'trainer'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '2,888 lb' },
     { label: 'Fuel type', value: 'Jet A-1 / diesel' },
@@ -805,7 +809,7 @@ export const da40ng: Aircraft = {
       items: [
         { c: 'Flight instruments', r: 'CHECKED' },
         { c: 'Altimeter', r: 'SET' },
-        { c: 'Flight plan', r: 'LOADED' },
+        { c: 'Flight plan', r: 'LOADED', guide: 'flight-plan' },
         { c: 'Lights', r: 'AS REQUIRED' },
         { c: 'Brakes', r: 'CHECK' },
         { c: 'Steering', r: 'DIFFERENTIAL BRAKING', note: 'The nosewheel is free castoring' },
@@ -923,6 +927,7 @@ export const da62: Aircraft = {
   engines: { count: 2, type: 'piston', name: '2 x Austro AE330 turbo diesel, 180 hp each' },
   seats: 7,
   tags: ['diesel', 'jet a', 'fadec', 'twin', 'g1000', 'composite'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '5,071 lb' },
     { label: 'Fuel type', value: 'Jet A-1 / diesel' },
@@ -1091,6 +1096,7 @@ export const da40tdi: Aircraft = {
   engines: { count: 1, type: 'piston', name: 'Centurion 2.0 turbo diesel, 135 hp' },
   seats: 4,
   tags: ['diesel', 'jet a', 'fadec', 'single lever', 'g1000', 'composite', 'economical'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '2,646 lb' },
     { label: 'Fuel type', value: 'Jet A-1 / diesel' },

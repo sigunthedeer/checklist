@@ -6,7 +6,7 @@ import { SpeedsTable } from '@/components/speeds';
 import { useConfirm } from '@/components/confirm';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
 import { Button, Data, Label, Meter, Panel, Row, SectionHeader, Stat, T } from '@/components/ui';
-import { getAircraft, SIM_LABEL } from '@/data';
+import { getAircraft, getAvionics, SIM_LABEL } from '@/data';
 import type { ChecklistPhase } from '@/data';
 import { useProgress } from '@/state/progress';
 import { useCustom } from '@/state/custom';
@@ -56,6 +56,7 @@ export default function AircraftScreen() {
   }
 
   const favorite = progress.isFavorite(aircraft.id);
+  const avionics = getAvionics(aircraft.avionics);
   const stripColumns = isTablet ? 4 : 2;
 
   const phaseCounts = (phase: ChecklistPhase) => ({
@@ -132,6 +133,32 @@ export default function AircraftScreen() {
                 onPress={() => router.push(`/aircraft/${aircraft.id}/${phase.id}`)}
               />
             ))}
+          </Panel>
+        </View>
+      ) : null}
+
+      {avionics ? (
+        <View style={styles.section}>
+          <SectionHeader>Flight management</SectionHeader>
+          <Panel>
+            <Row
+              first
+              onPress={() => router.push(`/fms/${avionics.id}`)}
+              style={styles.dataRow}
+              accessibilityLabel={`${avionics.name} guide`}
+            >
+              <View style={styles.grow}>
+                <T size={15} weight="600">
+                  {avionics.name}
+                </T>
+                <T size={12} color={theme.textDim} style={{ marginTop: 3 }}>
+                  {avionics.procedures.length} step-by-step procedures: route, speeds, approach
+                </T>
+              </View>
+              <T size={15} color={theme.textFaint}>
+                {'›'}
+              </T>
+            </Row>
           </Panel>
         </View>
       ) : null}

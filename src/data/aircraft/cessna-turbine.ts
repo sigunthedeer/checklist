@@ -11,6 +11,7 @@ export const cessna208b: Aircraft = {
   engines: { count: 1, type: 'turboprop', name: 'Pratt & Whitney Canada PT6A-140, 867 shp' },
   seats: 14,
   tags: ['bush', 'cargo', 'g1000', 'pt6', 'single turboprop', 'float', 'amphibian'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '8,807 lb (cargo pod)' },
     { label: 'Usable fuel', value: '2,224 lb / 332 US gal' },
@@ -101,7 +102,7 @@ export const cessna208b: Aircraft = {
         { c: 'Propeller lever', r: 'MAX RPM' },
         { c: 'Flight instruments (G1000)', r: 'CHECKED, NO RED X' },
         { c: 'Altimeter', r: 'SET' },
-        { c: 'Flight plan', r: 'LOADED' },
+        { c: 'Flight plan', r: 'LOADED', guide: 'flight-plan' },
         { c: 'Trims', r: 'SET FOR TAKEOFF' },
         { c: 'Taxi light', r: 'ON' },
         { c: 'Parking brake', r: 'RELEASE' },
@@ -282,6 +283,7 @@ export const citationCJ4: Aircraft = {
   engines: { count: 2, type: 'turbofan', name: '2 x Williams FJ44-4A, 3,621 lbf each' },
   seats: 10,
   tags: ['bizjet', 'collins', 'pro line 21', 'fms', 'single pilot'],
+  avionics: 'cj4-fms',
   specs: [
     { label: 'Max takeoff weight', value: '17,110 lb' },
     { label: 'Max cruise', value: '451 kt TAS' },
@@ -327,7 +329,7 @@ export const citationCJ4: Aircraft = {
       name: 'Before Start',
       kind: 'start',
       items: [
-        { c: 'FMS', r: 'INITIALISED, POSITION AND FLIGHT PLAN ENTERED' },
+        { c: 'FMS', r: 'INITIALISED, POSITION AND FLIGHT PLAN ENTERED', guide: 'init' },
         { c: 'Performance / V-speeds', r: 'COMPUTED AND SET' },
         { c: 'Altimeters', r: 'SET AND CROSS-CHECKED' },
         { c: 'Radios and transponder', r: 'SET' },
@@ -563,6 +565,7 @@ export const citationLongitude: Aircraft = {
   engines: { count: 2, type: 'turbofan', name: '2 x Honeywell HTF7700L, 7,665 lbf each' },
   seats: 12,
   tags: ['bizjet', 'g5000', 'garmin', 'super midsize', 'autothrottle'],
+  avionics: 'garmin-touch',
   specs: [
     { label: 'Max takeoff weight', value: '39,500 lb' },
     { label: 'Max cruise', value: '483 kt TAS' },
@@ -605,7 +608,7 @@ export const citationLongitude: Aircraft = {
       kind: 'start',
       items: [
         { c: 'APU', r: 'START, BLEED ON' },
-        { c: 'FMS', r: 'FLIGHT PLAN AND PERFORMANCE ENTERED' },
+        { c: 'FMS', r: 'FLIGHT PLAN AND PERFORMANCE ENTERED', guide: 'flight-plan' },
         { c: 'Takeoff speeds', r: 'COMPUTED AND SET' },
         { c: 'Altimeters', r: 'SET' },
         { c: 'Fuel pumps', r: 'AS REQUIRED' },
@@ -800,6 +803,7 @@ export const cessna408SkyCourier: Aircraft = {
   engines: { count: 2, type: 'turboprop', name: '2 x Pratt & Whitney Canada PT6A-65SC, 1,100 shp each' },
   seats: 19,
   tags: ['freight', 'cargo', 'g1000', 'twin turboprop', 'career'],
+  avionics: 'garmin-g1000',
   specs: [
     { label: 'Max takeoff weight', value: '19,000 lb' },
     { label: 'Max cruise', value: '210 kt' },
@@ -856,7 +860,7 @@ export const cessna408SkyCourier: Aircraft = {
         { c: 'Condition levers', r: 'HIGH IDLE' },
         { c: 'Flight instruments', r: 'CHECKED' },
         { c: 'Altimeter', r: 'SET' },
-        { c: 'Flight plan', r: 'LOADED' },
+        { c: 'Flight plan', r: 'LOADED', guide: 'flight-plan' },
         { c: 'Trims', r: 'SET' },
         { c: 'Taxi light', r: 'ON' },
         { c: 'Brakes', r: 'CHECK' },

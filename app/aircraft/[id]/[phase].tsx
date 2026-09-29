@@ -393,6 +393,11 @@ export default function ChecklistScreen() {
                         accent={accent}
                         checked={progress.isChecked(aircraft.id, phase.id, index)}
                         onToggle={() => onToggle(index)}
+                        onGuide={
+                          item.guide && aircraft.avionics
+                            ? () => router.push(`/fms/${aircraft.avionics}/${item.guide}`)
+                            : undefined
+                        }
                       />
                     </View>
                   ))}

@@ -3,9 +3,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { AircraftRow } from '@/components/rows';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
-import { Data, Label, Panel, SearchField, SectionHeader, Segmented, T, Tabs } from '@/components/ui';
+import { Data, Label, Panel, Row, SearchField, SectionHeader, Segmented, T, Tabs } from '@/components/ui';
 import {
   AIRCRAFT,
+  AVIONICS,
   CATEGORY_LABEL,
   CATEGORY_ORDER,
   filterFleet,
@@ -231,6 +232,32 @@ export default function FleetScreen() {
             </View>
           ) : null}
 
+          {unfiltered ? (
+            <View style={styles.section}>
+              <SectionHeader>Guides</SectionHeader>
+              <Panel>
+                <Row
+                  first
+                  onPress={() => router.push('/fms')}
+                  style={styles.guideRow}
+                  accessibilityLabel="FMS guides"
+                >
+                  <View style={styles.flex}>
+                    <T size={16} weight="700">
+                      FMS guides
+                    </T>
+                    <T size={12} color={theme.textDim} style={{ marginTop: 3 }}>
+                      {AVIONICS.map((unit) => unit.short).join('  ·  ')}
+                    </T>
+                  </View>
+                  <T size={15} color={theme.textFaint}>
+                    {'›'}
+                  </T>
+                </Row>
+              </Panel>
+            </View>
+          ) : null}
+
           {results.length === 0 ? (
             <View style={styles.empty}>
               <Label>No match</Label>
@@ -283,4 +310,5 @@ const styles = StyleSheet.create({
   column: { flex: 1 },
   empty: { paddingVertical: SPACE.xxl * 2, alignItems: 'center', paddingHorizontal: SPACE.xl },
   footer: { textAlign: 'center', marginTop: SPACE.sm },
+  guideRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
 });

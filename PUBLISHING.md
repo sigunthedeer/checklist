@@ -80,6 +80,7 @@ it is, but keep it to identification:
 >
 > • Search by name, type code or avionics
 > • Reference speeds and type data for every aircraft
+> • Step-by-step flight management guides, key by key, for the airliner, business jet and GPS avionics
 > • Progress that survives closing the app, and a new-flight reset when you are done
 > • Add your own items and notes for the aircraft you fly
 > • Beginner mode explains what each control is and where to find it
