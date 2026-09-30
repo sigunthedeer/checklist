@@ -2,7 +2,9 @@ import React, { useCallback, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useFlagSheet } from '@/components/flag';
 import { FmsStepRow } from '@/components/fms';
+import { useFlags } from '@/state/flags';
 import { ContentWidth, Screen } from '@/components/layout';
 import { Button, Data, Label, Meter, Panel, T } from '@/components/ui';
 import { getAvionics, getProcedure } from '@/data';
@@ -19,6 +21,8 @@ export default function ProcedureScreen() {
   const { unit: unitId, proc } = useLocalSearchParams<{ unit: string; proc: string }>();
   const theme = useTheme();
   const { settings } = useSettings();
+  const flags = useFlags();
+  const openFlag = useFlagSheet();
   const unit = getAvionics(unitId);
   const procedure = unit ? getProcedure(unit, proc) : undefined;
 
@@ -129,6 +133,16 @@ export default function ProcedureScreen() {
                 first={i === 0}
                 checked={done.includes(i)}
                 onToggle={() => toggle(i)}
+                flag={flags.flagFor({ kind: 'guide', scope: unit.id, section: procedure.id, index: i })}
+                onFlag={() =>
+                  openFlag({
+                    kind: 'guide',
+                    scope: unit.id,
+                    section: procedure.id,
+                    index: i,
+                    text: [step.do, step.entry, ...(step.keys ?? [])].filter(Boolean).join(' · '),
+                  })
+                }
               />
             ))}
           </Panel>
@@ -171,7 +185,8 @@ export default function ProcedureScreen() {
           </View>
 
           <T size={11} color={theme.textFaint} style={styles.footer}>
-            Simulator use only. Values marked as examples are placeholders, not data for your flight.
+            Simulator use only. Values marked as examples are placeholders, not data for your flight. Something
+            different in the sim? Long-press the step to flag it.
           </T>
         </ContentWidth>
       </ScrollView>

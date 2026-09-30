@@ -1,4 +1,5 @@
 import type { CustomData } from '@/state/custom';
+import type { FlagsData } from '@/state/flags';
 import type { ProgressData } from '@/state/progress';
 
 /**
@@ -14,17 +15,20 @@ export interface Backup {
   exportedAt: string;
   progress: ProgressData;
   custom: CustomData;
+  /** Things flagged as wrong in the sim. Absent from backups made before flags existed. */
+  flags: FlagsData;
 }
 
 export const BACKUP_FILENAME = 'checkride-backup.json';
 
-export function buildBackup(progress: ProgressData, custom: CustomData): string {
+export function buildBackup(progress: ProgressData, custom: CustomData, flags: FlagsData = {}): string {
   const backup: Backup = {
     app: 'checkride',
     version: 1,
     exportedAt: new Date().toISOString(),
     progress,
     custom,
+    flags,
   };
   return JSON.stringify(backup, null, 2);
 }
@@ -78,7 +82,36 @@ export function parseBackup(text: string): Backup {
       items: isObject(custom.items) ? (custom.items as CustomData['items']) : {},
       notes: isObject(custom.notes) ? (custom.notes as CustomData['notes']) : {},
     },
+    flags: parseFlags(raw.flags),
   };
+}
+
+/** Keeps only entries that look like flags, so a hand-edited file cannot put junk in the list. */
+function parseFlags(raw: unknown): FlagsData {
+  if (!isObject(raw)) return {};
+  const out: FlagsData = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (
+      isObject(value) &&
+      (value.kind === 'item' || value.kind === 'guide' || value.kind === 'trainer') &&
+      typeof value.scope === 'string' &&
+      typeof value.section === 'string' &&
+      typeof value.index === 'number' &&
+      typeof value.text === 'string'
+    ) {
+      out[key] = {
+        key,
+        kind: value.kind,
+        scope: value.scope,
+        section: value.section,
+        index: value.index,
+        text: value.text,
+        note: typeof value.note === 'string' ? value.note : '',
+        at: typeof value.at === 'number' ? value.at : 0,
+      };
+    }
+  }
+  return out;
 }
 
 /** Short human summary of what a backup holds, shown before restoring it. */
@@ -94,5 +127,7 @@ export function describeBackup(backup: Backup): string {
     `${backup.progress.favorites.length} favourite${backup.progress.favorites.length === 1 ? '' : 's'}`,
     `${ticked} ticked item${ticked === 1 ? '' : 's'}`,
   ];
+  const flags = Object.keys(backup.flags).length;
+  if (flags > 0) parts.push(`${flags} flag${flags === 1 ? '' : 's'}`);
   return parts.join(', ');
 }

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { FmsStep } from '@/data/types';
 import { useSettings, useTheme } from '@/state/settings';
 import { RADIUS, SPACE } from '@/theme';
+import { FlagNote } from './flag';
 import { Data, Label, T } from './ui';
 
 /** A hardware key, drawn as a keycap so it reads as something to press rather than text. */
@@ -55,12 +56,17 @@ export const FmsStepRow = memo(function FmsStepRow({
   checked,
   onToggle,
   first,
+  onFlag,
+  flag,
 }: {
   step: FmsStep;
   index: number;
   checked: boolean;
   onToggle: () => void;
   first?: boolean;
+  /** When given, a long press flags the step as wrong in the sim. */
+  onFlag?: () => void;
+  flag?: { note: string };
 }) {
   const theme = useTheme();
   const { settings } = useSettings();
@@ -69,6 +75,10 @@ export const FmsStepRow = memo(function FmsStepRow({
   return (
     <Pressable
       onPress={onToggle}
+      onLongPress={onFlag}
+      delayLongPress={450}
+      accessibilityActions={onFlag ? [{ name: 'flag', label: 'Flag as wrong in the sim' }] : undefined}
+      onAccessibilityAction={(e) => e.nativeEvent.actionName === 'flag' && onFlag?.()}
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
       aria-checked={checked}
@@ -125,6 +135,8 @@ export const FmsStepRow = memo(function FmsStepRow({
         </T>
 
         <StepSequence step={step} />
+
+        {flag ? <FlagNote note={flag.note} /> : null}
 
         {step.expect ? (
           <View style={styles.expect}>

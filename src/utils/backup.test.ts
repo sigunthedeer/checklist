@@ -67,4 +67,32 @@ describe('backup', () => {
       '1 of your own item, 1 aircraft note, 1 favourite, 3 ticked items',
     );
   });
+
+  describe('flags', () => {
+    const progress = { checked: {}, customChecked: {}, favorites: [], recents: [] };
+    const custom = { items: {}, notes: {} };
+    const flag = { key: 'item:a/b/0', kind: 'item' as const, scope: 'a', section: 'b', index: 0, text: 't', note: 'n', at: 5 };
+
+    it('carries flags through a backup', () => {
+      const backup = parseBackup(buildBackup(progress, custom, { [flag.key]: flag }));
+      expect(backup.flags).toEqual({ [flag.key]: flag });
+      expect(describeBackup(backup)).toMatch(/1 flag$/);
+    });
+
+    it('reads a backup from before flags existed', () => {
+      const old = JSON.stringify({ app: 'checkride', version: 1, exportedAt: 'x', progress, custom });
+      expect(parseBackup(old).flags).toEqual({});
+    });
+
+    it('drops anything in the flags that is not a flag', () => {
+      const junk = JSON.stringify({
+        app: 'checkride',
+        version: 1,
+        progress,
+        custom,
+        flags: { good: flag, bad: { kind: 'nonsense', scope: 1 }, alsoBad: 'x' },
+      });
+      expect(Object.keys(parseBackup(junk).flags)).toEqual(['good']);
+    });
+  });
 });

@@ -6,6 +6,8 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { ChecklistRow } from '@/components/checklist';
 import { SpeedsTable } from '@/components/speeds';
 import { useConfirm } from '@/components/confirm';
+import { useFlagSheet } from '@/components/flag';
+import { useFlags } from '@/state/flags';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
 import {
   Button,
@@ -40,6 +42,8 @@ export default function ChecklistScreen() {
   const progress = useProgress();
   const custom = useCustom();
   const confirm = useConfirm();
+  const flags = useFlags();
+  const openFlag = useFlagSheet();
   const { width } = useResponsive();
 
   const aircraft = getAircraft(id);
@@ -398,6 +402,10 @@ export default function ChecklistScreen() {
                             ? () => router.push(`/fms/${aircraft.avionics}/${item.guide}`)
                             : undefined
                         }
+                        flag={flags.flagFor({ kind: 'item', scope: aircraft.id, section: phase.id, index })}
+                        onFlag={() =>
+                          openFlag({ kind: 'item', scope: aircraft.id, section: phase.id, index, text: `${item.c}: ${item.r}` })
+                        }
                       />
                     </View>
                   ))}
@@ -452,6 +460,12 @@ export default function ChecklistScreen() {
             </Panel>
           </View>
           )}
+
+          {terms.length === 0 ? (
+            <T size={12} color={theme.textFaint} style={styles.flagHint}>
+              Something different in the sim? Long-press the item to flag it.
+            </T>
+          ) : null}
 
           {noMatches ? (
             <Panel style={styles.noMatch}>
@@ -640,6 +654,7 @@ export default function ChecklistScreen() {
 }
 
 const styles = StyleSheet.create({
+  flagHint: { textAlign: 'center', marginTop: SPACE.md },
   missing: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACE.xl },
   chrome: { borderBottomWidth: StyleSheet.hairlineWidth },
   status: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, paddingBottom: SPACE.md, gap: SPACE.sm },

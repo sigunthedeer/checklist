@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Entry, KeyCap } from '@/components/fms';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
+import { FlagNote, useFlagSheet } from '@/components/flag';
 import { GarminPanel, GnsPanel } from '@/components/garmin';
+import { useFlags } from '@/state/flags';
 import { McduKeyboard, McduScreenView, useFlash } from '@/components/mcdu';
 import { Button, Data, Label, Meter, Panel, Row, Segmented, T } from '@/components/ui';
 import { useSettings, useTheme } from '@/state/settings';
@@ -55,6 +57,8 @@ export default function TrainerRunScreen() {
   );
   const [mode, setMode] = useState<Mode>('guided');
   const [flash, triggerFlash] = useFlash();
+  const flags = useFlags();
+  const openFlag = useFlagSheet();
 
 
   // Presses are worked out against a ref rather than inside a state updater, so the
@@ -127,6 +131,10 @@ export default function TrainerRunScreen() {
 
   const screen = screenOf(session);
   const step = currentStep(session);
+  const stepTarget = step
+    ? { kind: 'trainer' as const, scope: unitId!, section: session.runs[session.procIndex].procedure.id, index: session.stepIndex }
+    : undefined;
+  const stepFlag = stepTarget ? flags.flagFor(stepTarget) : undefined;
   const expected = expectedKey(session);
   const showKeys = mode === 'guided' || session.missesHere >= HINT_AFTER;
   const highlight = !session.finished && showKeys ? expected : undefined;
@@ -178,6 +186,17 @@ export default function TrainerRunScreen() {
           <Data size={12} color={session.mistakes ? theme.warning : theme.textFaint}>
             {session.mistakes ? `${session.mistakes} ✕` : ''}
           </Data>
+          <Pressable
+            onPress={() => openFlag({ ...stepTarget!, text: `${step.guide.do} [screen: ${screenTitle(screen)}]` })}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Flag this step as wrong in the sim"
+            style={({ pressed }) => [styles.flagButton, { borderColor: stepFlag ? theme.caution : theme.borderStrong, opacity: pressed ? 0.7 : 1 }]}
+          >
+            <T size={11} weight="700" color={stepFlag ? theme.caution : theme.textDim}>
+              {stepFlag ? '⚑ Flagged' : '⚑ Flag'}
+            </T>
+          </Pressable>
         </View>
 
         {step.guide.cond ? (
@@ -188,6 +207,7 @@ export default function TrainerRunScreen() {
         <T size={16} weight="600" style={styles.instruction}>
           {step.guide.do}
         </T>
+        {stepFlag ? <FlagNote note={stepFlag.note} /> : null}
 
         {step.ack ? (
           <>
@@ -348,6 +368,11 @@ export default function TrainerRunScreen() {
   );
 }
 
+/** The page title on whichever kind of unit is showing, for a flag's context. */
+function screenTitle(screen: any): string {
+  return screen?.title?.text ?? screen?.mfd?.title ?? screen?.page?.title ?? '';
+}
+
 /** What to show for a cursor pick: where the knob should go, or that it is there and wants selecting. */
 function pickCaption(target: string, expected: string | undefined, confirmKey = 'ENT'): string {
   if (!expected) return `Highlight ${target}`;
@@ -356,6 +381,7 @@ function pickCaption(target: string, expected: string | undefined, confirmKey = 
 }
 
 const styles = StyleSheet.create({
+  flagButton: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth },
   flex: { flex: 1 },
   scroll: { paddingBottom: SPACE.xxl },
   body: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.md },

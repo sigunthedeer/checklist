@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { ChecklistItem } from '@/data/types';
 import { useSettings, useTheme } from '@/state/settings';
 import { RADIUS, SPACE } from '@/theme';
+import { FlagNote } from './flag';
 import { Data, Label, T } from './ui';
 
 /** Long enough to span the widest tablet; the container clips the rest. */
@@ -17,6 +18,8 @@ export const ChecklistRow = memo(function ChecklistRow({
   first,
   label,
   onGuide,
+  onFlag,
+  flag,
   onDelete,
 }: {
   item: ChecklistItem;
@@ -29,6 +32,10 @@ export const ChecklistRow = memo(function ChecklistRow({
   label?: string;
   /** When given, the row links to the FMS procedure that explains the item. */
   onGuide?: () => void;
+  /** When given, a long press flags the item as wrong in the sim. */
+  onFlag?: () => void;
+  /** The flag on this item, if there is one. */
+  flag?: { note: string };
   /** When given, a delete control appears at the end of the row. */
   onDelete?: () => void;
 }) {
@@ -39,6 +46,10 @@ export const ChecklistRow = memo(function ChecklistRow({
   return (
     <Pressable
       onPress={onToggle}
+      onLongPress={onFlag}
+      delayLongPress={450}
+      accessibilityActions={onFlag ? [{ name: 'flag', label: 'Flag as wrong in the sim' }] : undefined}
+      onAccessibilityAction={(e) => e.nativeEvent.actionName === 'flag' && onFlag?.()}
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
       aria-checked={checked}
@@ -118,6 +129,8 @@ export const ChecklistRow = memo(function ChecklistRow({
             </T>
           </View>
         ) : null}
+
+        {flag ? <FlagNote note={flag.note} /> : null}
 
         {onGuide ? (
           <Pressable

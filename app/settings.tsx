@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Modal, Platform, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { router } from 'expo-router';
 import { ContentWidth, Screen } from '@/components/layout';
 import { Button, Data, Label, Panel, Row, SectionHeader, Segmented, T, Toggle } from '@/components/ui';
 import { AIRCRAFT, SIM_LABEL } from '@/data';
 import { useProgress } from '@/state/progress';
 import { useConfirm } from '@/components/confirm';
 import { useCustom } from '@/state/custom';
+import { useFlags } from '@/state/flags';
 import {
   BACKUP_FILENAME,
   BackupError,
@@ -38,13 +40,14 @@ export default function SettingsScreen() {
   const { settings, set } = useSettings();
   const progress = useProgress();
   const custom = useCustom();
+  const flags = useFlags();
   const confirm = useConfirm();
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
 
   const exportBackup = async () => {
-    const json = buildBackup(progress.exportData(), custom.exportData());
+    const json = buildBackup(progress.exportData(), custom.exportData(), flags.exportData());
     if (Platform.OS === 'web') {
       // A real file download, so it lands somewhere the OS will not evict.
       const blob = new Blob([json], { type: 'application/json' });
@@ -78,6 +81,7 @@ export default function SettingsScreen() {
     if (!confirmed) return;
     progress.importData(backup.progress);
     custom.importData(backup.custom);
+    flags.importData(backup.flags);
     setPasting(false);
     setPasted('');
     setProblem(null);
@@ -229,7 +233,23 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <SectionHeader>Your data</SectionHeader>
             <Panel>
-              <Row first>
+              <Row first onPress={() => router.push('/flags')} style={styles.flagsRow} accessibilityLabel="Flags">
+                <View style={{ flex: 1 }}>
+                  <T size={15} weight="600">
+                    Flags
+                  </T>
+                  <T size={12} color={theme.textDim} style={{ marginTop: 3 }}>
+                    Things you marked as wrong in the sim, ready to send
+                  </T>
+                </View>
+                <Data size={13} color={flags.all.length ? theme.caution : theme.textFaint}>
+                  {flags.all.length}
+                </Data>
+                <T size={15} color={theme.textFaint}>
+                  {'›'}
+                </T>
+              </Row>
+              <Row>
                 <T size={13} color={theme.textDim} style={{ lineHeight: 19 }}>
                   Your own items, notes, favourites and progress live only on this device, and the
                   browser can clear that storage without warning. A backup file is the only way to
@@ -363,6 +383,7 @@ function ToggleRow({
 }
 
 const styles = StyleSheet.create({
+  flagsRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
   scroll: { paddingBottom: SPACE.xxl },
   body: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.lg },
   section: { marginBottom: SPACE.xl },

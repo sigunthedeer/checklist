@@ -10,6 +10,8 @@ import { SettingsProvider, useSettings, useTheme } from '@/state/settings';
 import { ProgressProvider } from '@/state/progress';
 import { CustomProvider } from '@/state/custom';
 import { ConfirmProvider } from '@/components/confirm';
+import { FlagSheetProvider } from '@/components/flag';
+import { FlagsProvider } from '@/state/flags';
 import { RADIUS, SPACE } from '@/theme';
 
 export default function RootLayout() {
@@ -19,9 +21,13 @@ export default function RootLayout() {
         <SettingsProvider>
           <ProgressProvider>
             <CustomProvider>
-              <ConfirmProvider>
-                <Shell />
-              </ConfirmProvider>
+              <FlagsProvider>
+                <ConfirmProvider>
+                  <FlagSheetProvider>
+                    <Shell />
+                  </FlagSheetProvider>
+                </ConfirmProvider>
+              </FlagsProvider>
             </CustomProvider>
           </ProgressProvider>
         </SettingsProvider>

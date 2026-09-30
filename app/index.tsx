@@ -17,6 +17,7 @@ import {
   type AircraftCategory,
   type SimVersion,
 } from '@/data';
+import { useFlags } from '@/state/flags';
 import { useProgress } from '@/state/progress';
 import { useSettings, useTheme } from '@/state/settings';
 import { SPACE } from '@/theme';
@@ -34,6 +35,7 @@ export default function FleetScreen() {
   const theme = useTheme();
   const { settings, set } = useSettings();
   const progress = useProgress();
+  const flags = useFlags();
   const { columns } = useResponsive();
 
   const [search, setSearch] = useState('');
@@ -254,6 +256,21 @@ export default function FleetScreen() {
                     {'›'}
                   </T>
                 </Row>
+                {flags.all.length > 0 ? (
+                  <Row onPress={() => router.push('/flags')} style={styles.guideRow} accessibilityLabel="Flags to send">
+                    <View style={styles.flex}>
+                      <T size={16} weight="700" color={theme.caution}>
+                        ⚑ {flags.all.length} flag{flags.all.length === 1 ? '' : 's'} to send
+                      </T>
+                      <T size={12} color={theme.textDim} style={{ marginTop: 3 }}>
+                        Things you marked as wrong in the sim
+                      </T>
+                    </View>
+                    <T size={15} color={theme.textFaint}>
+                      {'›'}
+                    </T>
+                  </Row>
+                ) : null}
               </Panel>
             </View>
           ) : null}
