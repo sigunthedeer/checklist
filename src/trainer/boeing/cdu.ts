@@ -7,6 +7,7 @@
  * scripted procedures use are simulated; anything else renders a "not
  * simulated" page rather than pretending.
  */
+import { closeGap, directTo, endpoints, withArrival, withDestination, withRoute, withSid, type Leg } from '../plan';
 import type { FlightPhase, McduCell, McduColor, McduLine, McduScreen, TrainerSim } from '../screen';
 import {
   AIRPORTS,
@@ -37,12 +38,7 @@ type Page =
 
 type Rating = 'TO' | 'TO 1' | 'TO 2';
 
-export interface Leg {
-  ident: string;
-  kind: 'airport' | 'fix' | 'disco';
-  /** Airway or procedure the leg belongs to. */
-  via?: string;
-}
+export type { Leg } from '../plan';
 
 export interface CduState {
   page: Page;
@@ -220,12 +216,11 @@ function posInit(s: CduState, key: string, sp: string): CduState {
 function rte1(s: CduState, key: string, sp: string): CduState {
   if (key === '1L' && sp) {
     if (!AIRPORTS.has(sp)) return fail(s, 'NOT IN DATA BASE');
-    return modify(s, { origin: sp, plan: [{ ident: sp, kind: 'airport' }, ...destTail(s.dest)] });
+    return modify(s, { origin: sp, plan: endpoints(sp, s.dest) });
   }
   if (key === '1R' && sp) {
     if (!AIRPORTS.has(sp)) return fail(s, 'NOT IN DATA BASE');
-    const head = s.plan.filter((leg) => !(leg.kind === 'airport' && leg.ident === s.dest)).filter((leg, i, all) => !(leg.kind === 'disco' && i === all.length - 1));
-    return modify(s, { dest: sp, plan: [...head, ...destTail(sp)] });
+    return modify(s, { dest: sp, plan: withDestination(s.plan, s.dest, sp) });
   }
   if (key === '2L' && sp) {
     const match = /^RW(\d{2}[LRC]?)$/.exec(sp);
@@ -241,8 +236,6 @@ function activateOrPerf(s: CduState): CduState {
   if (!s.origin || !s.dest) return s;
   return { ...s, activating: true, pending: true };
 }
-
-const destTail = (dest?: string): Leg[] => (dest ? [{ ident: '', kind: 'disco' }, { ident: dest, kind: 'airport' }] : []);
 
 function rte2(s: CduState, line: number, side: 'L' | 'R', sp: string): CduState {
   if (line === 6) return side === 'R' && !sp ? activateOrPerf(s) : sp ? fail(s) : s;
@@ -263,30 +256,7 @@ function rte2(s: CduState, line: number, side: 'L' | 'R', sp: string): CduState 
   const via = rows[index]?.via;
   if (via ? !AIRWAYS[via].includes(sp) : !FIXES.has(sp)) return fail(s, 'NOT IN DATA BASE');
   rows[index] = { via, to: sp };
-  return modify(s, { rows, plan: routePlan({ ...s, rows }) });
-}
-
-/** The plan with the enroute legs rebuilt from the RTE 2 rows. */
-function routePlan(s: CduState): Leg[] {
-  const routeVias = new Set(s.rows.map((row) => row.via ?? 'DIRECT'));
-  const enroute: Leg[] = [];
-  let from: string | undefined;
-  for (const row of s.rows.filter((r) => r.to)) {
-    if (row.via) {
-      const fixes = AIRWAYS[row.via];
-      const a = from ? fixes.indexOf(from) : -1;
-      const b = fixes.indexOf(row.to);
-      enroute.push(...fixes.slice(a + 1, b + 1).map((ident) => ({ ident, kind: 'fix' as const, via: row.via })));
-    } else {
-      enroute.push({ ident: row.to, kind: 'fix', via: 'DIRECT' });
-    }
-    from = row.to;
-  }
-  const kept = s.plan.filter((leg) => !(leg.via && routeVias.has(leg.via)));
-  const destIndex = kept.findIndex((leg) => leg.kind === 'airport' && leg.ident === s.dest);
-  const head = destIndex >= 0 ? kept.slice(0, destIndex) : kept;
-  while (head.length && head[head.length - 1].kind === 'disco') head.pop();
-  return [...head, ...enroute, ...destTail(s.dest)];
+  return modify(s, { rows, plan: withRoute(s.plan, rows, AIRWAYS, s.dest) });
 }
 
 /* ---------------------------------------------------------- departures */
@@ -305,13 +275,7 @@ function departures(s: CduState, line: number, side: 'L' | 'R', sp: string): Cdu
   const sidId = sids[line - 1];
   if (!sidId) return s;
   const sid = SIDS[s.origin!].find((p) => p.id === sidId)!;
-  // Only legs of a previous SID go; with no SID yet, `via !== undefined` would drop the airports too.
-  const withoutOld = s.sid ? s.plan.filter((leg) => leg.via !== s.sid) : s.plan;
-  const [origin, ...rest] = withoutOld;
-  const sidLegs: Leg[] = sid.fixes.map((ident) => ({ ident, kind: 'fix', via: sid.id }));
-  // A SID that does not end where the route starts leaves a gap to close by hand.
-  const gap: Leg[] = rest[0] && rest[0].kind !== 'disco' && rest[0].ident !== sid.fixes[sid.fixes.length - 1] ? [{ ident: '', kind: 'disco' }] : [];
-  return modify(s, { sid: sid.id, plan: [origin, ...sidLegs, ...gap, ...rest] });
+  return modify(s, { sid: sid.id, plan: withSid(s.plan, s.sid, sid) });
 }
 
 /* ------------------------------------------------------------ arrivals */
@@ -332,16 +296,10 @@ function arrivals(s: CduState, line: number, side: 'L' | 'R', sp: string): CduSt
 /** The plan with the STAR and approach rebuilt onto the end of the route. */
 function arrivalPlan(s: CduState): Leg[] {
   const dest = s.dest!;
-  const arrivalIds = new Set([...(STARS[dest] ?? []), ...(APPROACHES[dest] ?? [])].map((p) => p.id));
-  const head = s.plan.filter((leg) => !(leg.via && arrivalIds.has(leg.via)));
-  while (head.length && (head[head.length - 1].kind === 'disco' || head[head.length - 1].ident === dest)) head.pop();
+  const ids = new Set([...(STARS[dest] ?? []), ...(APPROACHES[dest] ?? [])].map((p) => p.id));
   const star = STARS[dest]?.find((p) => p.id === s.star);
   const appr = APPROACHES[dest]?.find((p) => p.id === s.appr);
-  const starLegs: Leg[] = (star?.fixes ?? []).map((ident) => ({ ident, kind: 'fix', via: star!.id }));
-  const apprLegs: Leg[] = (appr?.fixes ?? []).map((ident) => ({ ident, kind: 'fix', via: appr!.id }));
-  const arrival = [...starLegs, ...apprLegs];
-  const joins = arrival.length > 0 && head[head.length - 1]?.ident === arrival[0].ident;
-  return [...head, ...(arrival.length && !joins ? [{ ident: '', kind: 'disco' as const }] : []), ...(joins ? arrival.slice(1) : arrival), { ident: dest, kind: 'airport' }];
+  return withArrival(s.plan, dest, ids, star, appr);
 }
 
 /* ---------------------------------------------------------------- legs */
@@ -375,28 +333,9 @@ function legs(s: CduState, line: number, side: 'L' | 'R', sp: string): CduState 
   }
 
   if (!FIXES.has(sp) && !AIRPORTS.has(sp)) return fail(s, 'NOT IN DATA BASE');
-  const target = s.plan.findIndex((l, i) => i > (at >= 0 ? at : 0) && l.ident === sp);
-
-  if (leg?.kind === 'disco') {
-    // Copying the next waypoint onto the boxes closes the gap.
-    if (target > at) return modify(s, { plan: [...s.plan.slice(0, at), ...s.plan.slice(target)] });
-    const plan = [...s.plan];
-    plan[at] = { ident: sp, kind: 'fix' };
-    return modify(s, { plan });
-  }
-
-  if (line === 1 && s.legsPage === 0) {
-    // The top line is where the aircraft goes next: a direct-to.
-    const first = s.active ?? 1;
-    const ahead = s.plan.findIndex((l, i) => i >= first && l.ident === sp);
-    if (ahead >= 0) {
-      return s.active !== undefined
-        ? modify(s, { active: ahead })
-        : modify(s, { plan: [...s.plan.slice(0, first), ...s.plan.slice(ahead)] });
-    }
-    const plan = [...s.plan.slice(0, first), { ident: sp, kind: 'fix' as const }, { ident: '', kind: 'disco' as const }, ...s.plan.slice(first)];
-    return modify(s, { plan });
-  }
+  if (leg?.kind === 'disco') return modify(s, { plan: closeGap(s.plan, at, sp) });
+  // The top line is where the aircraft goes next: a direct-to.
+  if (line === 1 && s.legsPage === 0) return modify(s, directTo(s.plan, s.active, sp));
   return fail(s);
 }
 

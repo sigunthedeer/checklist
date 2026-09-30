@@ -10,6 +10,7 @@ import { AVIONICS } from '../data/fms';
 import type { FmsProcedure, FmsStep } from '../data/types';
 import { airbusTrainer } from './airbus/script';
 import { boeingTrainer } from './boeing/script';
+import { cj4Trainer } from './cj4/script';
 import type { McduScreen } from './screen';
 import type { Chain, ProcedureScript, TrainerAction, TrainerUnit } from './script';
 
@@ -18,6 +19,7 @@ export type { TrainerAction } from './script';
 export const TRAINERS: Record<string, TrainerUnit> = {
   [airbusTrainer.unitId]: airbusTrainer,
   [boeingTrainer.unitId]: boeingTrainer,
+  [cj4Trainer.unitId]: cj4Trainer,
 };
 
 export function getTrainer(unitId: string | undefined): TrainerUnit | undefined {
