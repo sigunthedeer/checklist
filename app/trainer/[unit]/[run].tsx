@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Entry, KeyCap } from '@/components/fms';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
+import { GarminPanel } from '@/components/garmin';
 import { McduKeyboard, McduScreenView, useFlash } from '@/components/mcdu';
 import { Button, Data, Label, Meter, Panel, Row, Segmented, T } from '@/components/ui';
 import { useSettings, useTheme } from '@/state/settings';
@@ -100,7 +101,7 @@ export default function TrainerRunScreen() {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = keyFromKeyboard(e.key);
+      const key = trainer?.hardwareKeys?.[e.key] ?? keyFromKeyboard(e.key);
       // Arrow keys mean nothing on a Boeing CDU, and so on: only keys this unit has.
       if (!key || !keysRef.current.has(key)) return;
       e.preventDefault();
@@ -211,7 +212,13 @@ export default function TrainerRunScreen() {
               ? step.actions.map((action, i) => {
                   const done = i < session.actionIndex;
                   const label =
-                    'key' in action ? action.key : i === session.actionIndex && expected ? expected : `Key beside ${action.beside}`;
+                    'key' in action
+                      ? action.key
+                      : 'beside' in action
+                        ? i === session.actionIndex && expected
+                          ? expected
+                          : `Key beside ${action.beside}`
+                        : pickCaption(action.pick, i === session.actionIndex ? expected : undefined, trainer.sim.confirmKey);
                   return (
                     <View key={i} style={[styles.sequenceItem, done && styles.done]}>
                       {i > 0 || step.guide.entry ? (
@@ -263,12 +270,17 @@ export default function TrainerRunScreen() {
     </Panel>
   );
 
-  const mcdu = (
-    <View style={styles.mcdu}>
-      <McduScreenView screen={screen} onKey={onKey} highlight={highlight} flash={flash} />
-      <McduKeyboard layout={trainer.keyboard} onKey={onKey} highlight={highlight} flash={flash} lit={litKeys(session)} />
-    </View>
-  );
+  const mcdu =
+    trainer.display === 'garmin' ? (
+      <View style={styles.mcdu}>
+        <GarminPanel screen={screen} layout={trainer.keyboard} onKey={onKey} highlight={highlight} flash={flash} />
+      </View>
+    ) : (
+      <View style={styles.mcdu}>
+        <McduScreenView screen={screen} onKey={onKey} highlight={highlight} flash={flash} />
+        <McduKeyboard layout={trainer.keyboard} onKey={onKey} highlight={highlight} flash={flash} lit={litKeys(session)} />
+      </View>
+    );
 
   const controls = (
     <View style={styles.top}>
@@ -330,6 +342,13 @@ export default function TrainerRunScreen() {
       </ScrollView>
     </Screen>
   );
+}
+
+/** What to show for a cursor pick: where the knob should go, or that it is there and wants selecting. */
+function pickCaption(target: string, expected: string | undefined, confirmKey = 'ENT'): string {
+  if (!expected) return `Highlight ${target}`;
+  if (expected === confirmKey) return `${confirmKey} on ${target}`;
+  return `${expected} to ${target}`;
 }
 
 const styles = StyleSheet.create({

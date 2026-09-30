@@ -5,7 +5,7 @@ import { useTheme } from '@/state/settings';
 import { MONO } from '@/theme';
 
 /** The panel is hardware, so it keeps its own colours in every theme except night. */
-const HW = {
+export const HW = {
   bezel: '#23272C',
   key: '#353B42',
   keyPress: '#4A525B',
@@ -30,7 +30,7 @@ const MAX_FONT = 15;
 const ROW = 1.2;
 const GUTTER = 36;
 
-function usePalette() {
+export function usePalette() {
   const theme = useTheme();
   const night = theme.monochrome;
   return {

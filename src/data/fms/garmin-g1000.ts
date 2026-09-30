@@ -58,7 +58,13 @@ export const garminG1000: Avionics = {
           keys: ['ENT'],
           note: 'Example. If a list of matching waypoints appears, pick the right one and press ENT again.',
         },
-        { do: 'Repeat for each waypoint along the route, finishing with the destination airport.' },
+        { do: 'Turn the inner FMS knob again to open the entry box for the next waypoint.', keys: ['FMS inner'] },
+        {
+          do: 'Spell it and press ENT. Repeat for each waypoint along the route, finishing with the destination airport.',
+          entry: 'KPAE',
+          keys: ['ENT'],
+          note: 'Example: Paine Field, a short hop north of Seattle.',
+        },
         {
           do: 'Push the FMS knob to remove the cursor.',
           keys: ['PUSH CRSR'],

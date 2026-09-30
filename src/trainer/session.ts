@@ -11,6 +11,7 @@ import type { FmsProcedure, FmsStep } from '../data/types';
 import { airbusTrainer } from './airbus/script';
 import { boeingTrainer } from './boeing/script';
 import { cj4Trainer } from './cj4/script';
+import { g1000Trainer } from './garmin/script';
 import type { McduScreen } from './screen';
 import type { Chain, ProcedureScript, TrainerAction, TrainerUnit } from './script';
 
@@ -20,6 +21,7 @@ export const TRAINERS: Record<string, TrainerUnit> = {
   [airbusTrainer.unitId]: airbusTrainer,
   [boeingTrainer.unitId]: boeingTrainer,
   [cj4Trainer.unitId]: cj4Trainer,
+  [g1000Trainer.unitId]: g1000Trainer,
 };
 
 export function getTrainer(unitId: string | undefined): TrainerUnit | undefined {
@@ -135,7 +137,7 @@ export function currentStep(session: Session): BuiltStep | undefined {
   return session.runs[session.procIndex]?.steps[session.stepIndex];
 }
 
-export function screenOf(session: Session): McduScreen {
+export function screenOf(session: Session): any {
   return TRAINERS[session.unitId].sim.render(session.sim);
 }
 
@@ -175,7 +177,22 @@ export function lskBeside(screen: McduScreen, target: string, only?: 'label'): s
 }
 
 function resolve(session: Session, action: TrainerAction): string | undefined {
-  return 'key' in action ? action.key : lskBeside(screenOf(session), action.beside, action.in);
+  if ('key' in action) return action.key;
+  if ('beside' in action) return lskBeside(screenOf(session), action.beside, action.in);
+  const { sim } = TRAINERS[session.unitId];
+  const where = sim.pick?.(session.sim, action.pick);
+  if (!where) return undefined;
+  if (!where.onTarget) return where.toward;
+  return action.confirm === false ? undefined : sim.confirmKey;
+}
+
+const isCommit = (unitId: string, key: string) =>
+  TRAINERS[unitId].sim.isCommitKey?.(key) ?? key.startsWith('LSK ');
+
+/** Whether an action is a cursor move that is already done: the item is highlighted. */
+function pickSatisfied(session: Session, action: TrainerAction | undefined): boolean {
+  if (!action || !('pick' in action) || action.confirm !== false) return false;
+  return !!TRAINERS[session.unitId].sim.pick?.(session.sim, action.pick).onTarget;
 }
 
 /** The key the current action wants, resolved against the screen. */
@@ -185,14 +202,30 @@ export function expectedKey(session: Session): string | undefined {
 }
 
 /** Whether the step wants its entry in the scratchpad when this action's key is pressed. */
-function entryDueNow(step: BuiltStep, actionIndex: number, key: string): boolean {
-  if (!step.guide.entry || !key.startsWith('LSK ')) return false;
-  // The entry is consumed by the step's first line select key; a `beside` pick is always one.
-  const firstLsk = step.actions.findIndex((a) => !('key' in a) || a.key.startsWith('LSK '));
-  return actionIndex === firstLsk;
+function entryDueNow(unitId: string, step: BuiltStep, actionIndex: number, key: string): boolean {
+  if (!step.guide.entry || !isCommit(unitId, key)) return false;
+  // The entry is consumed by the step's first committing key: a line select key, ENT, or a confirmed pick.
+  const first = step.actions.findIndex((a) =>
+    'key' in a ? isCommit(unitId, a.key) : 'beside' in a || a.confirm !== false,
+  );
+  return actionIndex === first;
 }
 
 const normalise = (text: string) => text.trim().toUpperCase().replace(/\s+/g, ' ');
+
+/** Move past the current action, then past any cursor moves that are already done. */
+function nextAction(session: Session): Session {
+  const step = currentStep(session)!;
+  let moved: Session = { ...session, actionIndex: session.actionIndex + 1, missesHere: 0 };
+  if (moved.actionIndex >= step.actions.length) moved = advance(moved);
+  return settle(moved);
+}
+
+function settle(session: Session): Session {
+  const step = currentStep(session);
+  if (!session.finished && step && pickSatisfied(session, step.actions[session.actionIndex])) return nextAction(session);
+  return session;
+}
 
 function advance(session: Session): Session {
   const run = session.runs[session.procIndex];
@@ -222,30 +255,40 @@ export function press(session: Session, key: string): Session {
   if (!step) return session;
   const { sim } = TRAINERS[session.unitId];
   const action = step.actions[session.actionIndex];
+  const alias = sim.keyAlias?.(key) ?? key;
 
-  // Typing and paging are never wrong; the scratchpad is checked when it is used.
+  // Typing, paging and knob turns are never wrong; what they lead to is checked when it is used.
+  // `expected` may name a direction (the knob turned back); `want` is the key regardless of direction.
   const expected = expectedKey(session);
+  const want = expected === undefined ? undefined : (sim.keyAlias?.(expected) ?? expected);
   const free =
     sim.isTypingKey(key) ||
-    (sim.scrollKeys.includes(key) && expected !== key) ||
-    (key === 'CLR' && expected !== 'CLR');
-  if (free) return { ...session, sim: sim.press(session.sim, key), feedback: undefined };
+    (sim.scrollKeys.includes(key) && want !== alias) ||
+    (key === 'CLR' && want !== 'CLR') ||
+    (!!sim.freeKeys?.includes(key) && want !== alias);
+  if (free) return settle({ ...session, sim: sim.press(session.sim, key), feedback: undefined });
 
   if (!action) {
     return { ...session, feedback: { kind: 'info', text: 'Nothing to press for this step. Tap Continue.' } };
   }
 
   if (!expected) {
+    if ('pick' in action) return wrong(session, `${action.pick} is not on this page.`);
     // A `beside` target that is not on screen: almost always paged or scrolled off.
     const target = 'beside' in action ? action.beside : '';
     const [back, forward] = sim.scrollKeys;
     return wrong(session, `${target} is not on screen. Page through with ${back} and ${forward} until it is.`);
   }
 
-  if (key !== expected) return wrong(session, `That was ${key}.`);
+  if (alias !== want) {
+    if ('pick' in action && alias === sim.confirmKey) {
+      return wrong(session, `Move the cursor to ${action.pick} before pressing ${sim.confirmKey}.`);
+    }
+    return wrong(session, `That was ${key}.`);
+  }
 
   const scratchpad = normalise(sim.scratchpad(session.sim));
-  if (entryDueNow(step, session.actionIndex, key)) {
+  if (entryDueNow(session.unitId, step, session.actionIndex, key)) {
     const entry = normalise(step.guide.entry!);
     if (scratchpad !== entry) {
       return {
@@ -253,12 +296,12 @@ export function press(session: Session, key: string): Session {
         feedback: {
           kind: 'error',
           text: scratchpad
-            ? `The scratchpad reads ${scratchpad}. Clear it with CLR and type ${entry}.`
+            ? `The entry reads ${scratchpad}. Correct it to ${entry} first.`
             : `Type ${entry} first. It goes into the scratchpad, then this key moves it into place.`,
         },
       };
     }
-  } else if (key.startsWith('LSK ') && scratchpad && scratchpad !== normalise(session.carry ?? '')) {
+  } else if (isCommit(session.unitId, key) && scratchpad && scratchpad !== normalise(session.carry ?? '')) {
     return {
       ...session,
       feedback: { kind: 'error', text: 'Clear the scratchpad with CLR first, or this key will try to enter it.' },
@@ -266,15 +309,10 @@ export function press(session: Session, key: string): Session {
   }
 
   const next = sim.press(session.sim, key);
-  const moved: Session = {
-    ...session,
-    sim: next,
-    feedback: undefined,
-    missesHere: 0,
-    carry: sim.scratchpad(next) || undefined,
-    actionIndex: session.actionIndex + 1,
-  };
-  return moved.actionIndex >= step.actions.length ? advance(moved) : moved;
+  const pressed: Session = { ...session, sim: next, feedback: undefined, missesHere: 0, carry: sim.scratchpad(next) || undefined };
+  // A cursor move towards a pick is progress, but the pick is only done once the item is selected (or reached).
+  if ('pick' in action && alias !== sim.confirmKey) return settle(pressed);
+  return nextAction(pressed);
 }
 
 /** Move past a step that has nothing to press. */
@@ -296,7 +334,7 @@ export function autoplay(
   unitId: string,
   procedureId: string,
   from: unknown,
-  observe?: (screen: McduScreen, key: string) => void,
+  observe?: (screen: any, key: string) => void,
 ): any {
   const trainer = TRAINERS[unitId];
   const script = scriptFor(unitId, procedureId);
@@ -317,17 +355,17 @@ export function autoplay(
       // Type the entry the way a person would, one key at a time.
       for (const char of step.guide.entry.toUpperCase()) session = press(session, char === ' ' ? 'SP' : char);
     }
+    const action = step.actions[session.actionIndex];
     let key = expectedKey(session);
-    for (let pages = 0; !key && pages < 20; pages += 1) {
+    for (let pages = 0; !key && 'beside' in action && pages < 20; pages += 1) {
       session = press(session, forward);
       key = expectedKey(session);
     }
-    const action = step.actions[session.actionIndex];
     if (!key) throw new Error(`${procedureId} step ${session.stepIndex}: cannot find ${JSON.stringify(action)}`);
     observe?.(screenOf(session), key);
     const before = session;
     session = press(session, key);
-    if (session.feedback?.kind === 'error' || session === before) {
+    if (session.feedback?.kind === 'error' || session.mistakes > before.mistakes || session === before) {
       throw new Error(`${procedureId} step ${before.stepIndex}: ${key} rejected: ${session.feedback?.text ?? 'no change'}`);
     }
     const message = trainer.sim.message(session.sim);

@@ -5,7 +5,15 @@ import type { FlightPhase } from './screen';
  * line select key beside some text on the screen. `in: 'label'` restricts the
  * match to the small labels, for fields whose value is still empty boxes.
  */
-export type TrainerAction = { key: string } | { beside: string; in?: 'label' };
+export type TrainerAction =
+  | { key: string }
+  | { beside: string; in?: 'label' }
+  /**
+   * Move the cursor to an item and, unless `confirm` is false, select it with
+   * the unit's confirm key. For units driven by a cursor rather than line
+   * select keys, where pressing ENT in the wrong place would pick the wrong thing.
+   */
+  | { pick: string; confirm?: boolean };
 
 export interface StepScript {
   /** Replaces the guide's keys, for picks whose line depends on the page. */
@@ -32,6 +40,8 @@ export interface ProcedureScript {
 export const k = (key: string): TrainerAction => ({ key });
 export const beside = (text: string): TrainerAction => ({ beside: text });
 export const besideLabel = (text: string): TrainerAction => ({ beside: text, in: 'label' });
+export const pick = (text: string): TrainerAction => ({ pick: text });
+export const cursorTo = (text: string): TrainerAction => ({ pick: text, confirm: false });
 
 export interface Chain {
   id: string;
@@ -44,11 +54,15 @@ export interface Chain {
 export interface TrainerUnit<S = any> {
   /** The avionics id from the FMS guides; the guide is the script. */
   unitId: string;
-  sim: import('./screen').TrainerSim<S>;
+  sim: import('./screen').TrainerSim<S, any>;
+  /** How the unit is drawn: a CDU with line select keys (the default), or a Garmin display and bezel. */
+  display?: 'cdu' | 'garmin';
   keyboard: import('./screen').KeyboardLayout;
   /** Keyed by guide procedure id. A procedure without one is not trainable. */
   scripts: Record<string, ProcedureScript>;
   /** One paragraph on the training flight and which of its data is invented. */
   scenario: string;
   chains: Chain[];
+  /** Hardware keyboard keys (web `KeyboardEvent.key`) mapped to unit keys, over the defaults. */
+  hardwareKeys?: Record<string, string>;
 }

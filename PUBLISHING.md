@@ -81,7 +81,7 @@ it is, but keep it to identification:
 > • Search by name, type code or avionics
 > • Reference speeds and type data for every aircraft
 > • Step-by-step flight management guides, key by key, for the airliner, business jet and GPS avionics
-> • Practice trainers for the Airbus MCDU, the Boeing CDU and the CJ4 FMS: press the real keys through a whole setup, with feedback on every press
+> • Practice trainers for the Airbus MCDU, the Boeing CDU, the CJ4 FMS and the Garmin G1000: press the real keys and turn the real knobs through a whole setup, with feedback on every press
 > • Progress that survives closing the app, and a new-flight reset when you are done
 > • Add your own items and notes for the aircraft you fly
 > • Beginner mode explains what each control is and where to find it

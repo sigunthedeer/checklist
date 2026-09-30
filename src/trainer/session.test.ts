@@ -75,7 +75,9 @@ describe.each(Object.keys(TRAINERS))('%s trainer', (unitId) => {
 
   it('counts a wrong key and leaves the unit alone', () => {
     const start = createSession(unitId, [ids[0]]);
-    const wrongKey = [...keyboard].find((key) => !trainer.sim.isTypingKey(key) && key !== expectedKey(start) && key !== 'CLR' && !trainer.sim.scrollKeys.includes(key))!;
+    const harmless = (key: string) =>
+      trainer.sim.isTypingKey(key) || key === 'CLR' || trainer.sim.scrollKeys.includes(key) || !!trainer.sim.freeKeys?.includes(key);
+    const wrongKey = [...keyboard].find((key) => !harmless(key) && key !== expectedKey(start))!;
     const s = press(start, wrongKey);
     expect(s.mistakes).toBe(1);
     expect(s.sim).toEqual(start.sim);
