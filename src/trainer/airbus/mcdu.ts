@@ -19,35 +19,8 @@ import {
   STARS,
 } from './navdata';
 
-export type McduColor = 'white' | 'cyan' | 'green' | 'amber' | 'yellow';
+import type { FlightPhase, McduCell, McduColor, McduLine, McduScreen, TrainerSim } from '../screen';
 
-export interface McduCell {
-  text: string;
-  color: McduColor;
-  /** Small font, as the MCDU uses for labels and default values. */
-  small?: boolean;
-}
-
-/** One of the six data lines: a small label row above a value row. */
-export interface McduLine {
-  labelL?: McduCell;
-  labelC?: McduCell;
-  labelR?: McduCell;
-  valueL?: McduCell;
-  valueC?: McduCell;
-  valueR?: McduCell;
-}
-
-export interface McduScreen {
-  titleL?: McduCell;
-  title: McduCell;
-  titleR?: McduCell;
-  /** Always six. */
-  lines: McduLine[];
-  scratchpad: McduCell;
-}
-
-export type FlightPhase = 'preflight' | 'cruise' | 'descent';
 type PerfPage = 'TAKE OFF' | 'CLB' | 'CRZ' | 'DES' | 'APPR';
 type Page =
   | 'MENU'
@@ -880,3 +853,29 @@ function perfPage(s: McduState): Omit<McduScreen, 'scratchpad'> {
       };
   }
 }
+
+/* =============================================================== trainer */
+
+function enterPhase(sim: McduState, phase: FlightPhase, activeLeg?: string, keepPage?: boolean): McduState {
+  const active = activeLeg ? sim.plan.findIndex((leg) => leg.ident === activeLeg) : -1;
+  return {
+    ...sim,
+    phase,
+    active: active >= 0 ? active : undefined,
+    page: keepPage ? sim.page : phase === 'preflight' ? 'MENU' : 'F-PLN',
+    scratchpad: '',
+    message: undefined,
+    scroll: 0,
+  };
+}
+
+export const airbusSim: TrainerSim<McduState> = {
+  initial: INITIAL_STATE,
+  press: pressKey,
+  render,
+  isTypingKey,
+  scrollKeys: ['↑', '↓'],
+  scratchpad: (s) => s.scratchpad,
+  message: (s) => s.message,
+  enterPhase,
+};

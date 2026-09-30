@@ -5,7 +5,7 @@ import { ContentWidth, Screen } from '@/components/layout';
 import { Button, Data, Label, Panel, Row, SectionHeader, T } from '@/components/ui';
 import { getAvionics } from '@/data';
 import { useTheme } from '@/state/settings';
-import { buildProcedure, CHAINS, trainerProcedures } from '@/trainer/session';
+import { buildProcedure, getTrainer, trainerChains, trainerProcedures } from '@/trainer/session';
 import { accentFor, PHASE_COLOR, PHASE_LABEL, SPACE } from '@/theme';
 
 export default function TrainerMenuScreen() {
@@ -13,8 +13,9 @@ export default function TrainerMenuScreen() {
   const theme = useTheme();
   const unit = getAvionics(unitId);
   const procedures = trainerProcedures(unitId ?? '');
+  const trainer = getTrainer(unitId);
 
-  if (!unit || procedures.length === 0) {
+  if (!unit || !trainer || procedures.length === 0) {
     return (
       <Screen>
         <View style={styles.missing}>
@@ -41,19 +42,18 @@ export default function TrainerMenuScreen() {
               {unit.name} trainer
             </T>
             <T size={14} color={theme.textDim} style={styles.intro}>
-              Work through the guide on an MCDU you can press. Type into the scratchpad, press the key beside the
-              field, and watch the page change. Guided mode shows each key; Test yourself hides them until you
-              miss twice.
+              Work through the guide on a simulated {unit.short} you can press. Type into the scratchpad, press
+              the key beside the field, and watch the page change. Guided mode shows each key; Test yourself
+              hides them until you miss twice.
             </T>
             <T size={13} color={theme.textFaint} style={styles.intro}>
-              The flight is London Heathrow to Paris Charles de Gaulle. The airports and runways are real; the
-              procedures, airway and several waypoints are made up for training.
+              {trainer.scenario}
             </T>
           </View>
 
           <SectionHeader>Full runs</SectionHeader>
           <Panel style={styles.section}>
-            {(CHAINS[unit.id] ?? []).map((chain, i) => (
+            {trainerChains(unit.id).map((chain, i) => (
               <Row
                 key={chain.id}
                 first={i === 0}

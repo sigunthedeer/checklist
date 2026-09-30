@@ -7,11 +7,14 @@ import { ContentWidth, Screen, useResponsive } from '@/components/layout';
 import { McduKeyboard, McduScreenView, useFlash } from '@/components/mcdu';
 import { Button, Data, Label, Meter, Panel, Row, Segmented, T } from '@/components/ui';
 import { useSettings, useTheme } from '@/state/settings';
-import { keyFromKeyboard } from '@/trainer/keyboard';
+import { getAvionics } from '@/data';
+import { keyFromKeyboard, keysOf } from '@/trainer/screen';
 import {
   acknowledge,
-  CHAINS,
   createSession,
+  getTrainer,
+  litKeys,
+  trainerChains,
   currentStep,
   expectedKey,
   press,
@@ -37,8 +40,10 @@ export default function TrainerRunScreen() {
   const { settings } = useSettings();
   const { isWide } = useResponsive();
 
+  const trainer = getTrainer(unitId);
+  const unit = getAvionics(unitId);
   const plan = useMemo(() => {
-    const chain = CHAINS[unitId ?? '']?.find((c) => c.id === run);
+    const chain = trainerChains(unitId ?? '').find((c) => c.id === run);
     if (chain) return { name: chain.name, procedures: chain.procedures };
     const procedure = trainerProcedures(unitId ?? '').find((p) => p.id === run);
     return procedure ? { name: procedure.name, procedures: [procedure.id] } : undefined;
@@ -89,12 +94,15 @@ export default function TrainerRunScreen() {
   // A hardware keyboard types into the scratchpad on the web and on tablets with one attached.
   const onKeyRef = useRef(onKey);
   onKeyRef.current = onKey;
+  const keysRef = useRef<Set<string>>(new Set());
+  keysRef.current = trainer ? keysOf(trainer.keyboard) : new Set();
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const key = keyFromKeyboard(e.key);
-      if (!key) return;
+      // Arrow keys mean nothing on a Boeing CDU, and so on: only keys this unit has.
+      if (!key || !keysRef.current.has(key)) return;
       e.preventDefault();
       onKeyRef.current(key);
     };
@@ -102,7 +110,7 @@ export default function TrainerRunScreen() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  if (!plan || !session) {
+  if (!plan || !session || !trainer || !unit) {
     return (
       <Screen>
         <View style={styles.missing}>
@@ -258,7 +266,7 @@ export default function TrainerRunScreen() {
   const mcdu = (
     <View style={styles.mcdu}>
       <McduScreenView screen={screen} onKey={onKey} highlight={highlight} flash={flash} />
-      <McduKeyboard onKey={onKey} highlight={highlight} flash={flash} />
+      <McduKeyboard layout={trainer.keyboard} onKey={onKey} highlight={highlight} flash={flash} lit={litKeys(session)} />
     </View>
   );
 
@@ -287,7 +295,7 @@ export default function TrainerRunScreen() {
     // Controls and instructions on the left, so the MCDU gets the full height on the right.
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'MCDU TRAINER' }} />
+        <Stack.Screen options={{ title: `${unit.short.toUpperCase()} TRAINER` }} />
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <ContentWidth style={styles.body}>
             <View style={styles.twoPane}>
@@ -309,7 +317,7 @@ export default function TrainerRunScreen() {
   // the top while the keyboard scrolls beneath it.
   return (
     <Screen>
-      <Stack.Screen options={{ title: 'MCDU TRAINER' }} />
+      <Stack.Screen options={{ title: `${unit.short.toUpperCase()} TRAINER` }} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" stickyHeaderIndices={[1]}>
         <ContentWidth style={styles.body}>{controls}</ContentWidth>
         <View style={[styles.sticky, { backgroundColor: theme.bg }]}>

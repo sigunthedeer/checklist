@@ -1,146 +1,48 @@
 /**
- * The trainer: plays an FMS guide procedure against the simulated MCDU.
+ * The trainer: plays an FMS guide procedure against a simulated unit.
  *
  * The guide is the script. Each step's `entry` has to be typed and its `keys`
- * pressed in order. A scenario only fills the gaps the guide leaves on
+ * pressed in order. A unit's script only fills the gaps the guide leaves on
  * purpose: where a key depends on what the page lists (a runway, a SID), it
- * names the text to press beside, and it explains steps that have nothing to
- * press here.
+ * names the text to press beside, and it explains steps with nothing to press.
  */
 import { AVIONICS } from '../data/fms';
 import type { FmsProcedure, FmsStep } from '../data/types';
-import {
-  INITIAL_STATE,
-  isTypingKey,
-  pressKey,
-  render,
-  type FlightPhase,
-  type McduScreen,
-  type McduState,
-} from './mcdu';
+import { airbusTrainer } from './airbus/script';
+import { boeingTrainer } from './boeing/script';
+import type { McduScreen } from './screen';
+import type { Chain, ProcedureScript, TrainerAction, TrainerUnit } from './script';
 
-export type TrainerAction = { key: string } | { beside: string };
+export type { TrainerAction } from './script';
 
-interface StepScript {
-  /** Replaces the guide's keys, for picks whose line depends on the page. */
-  keys?: TrainerAction[];
-  /** Nothing to press in this scenario, and why. */
-  ack?: string;
-}
-
-interface ProcedureScript {
-  /** Procedures played automatically first, to set the scene. */
-  requires: string[];
-  phase: FlightPhase;
-  /** Index into `plan` of the leg being flown to, once airborne. */
-  activeLeg?: string;
-  steps?: Record<number, StepScript>;
-}
-
-const PREFLIGHT = ['init', 'departure', 'route', 'discontinuity', 'fuel', 'perf-takeoff'];
-const k = (key: string): TrainerAction => ({ key });
-const beside = (text: string): TrainerAction => ({ beside: text });
-
-/** The A320 training flight, EGLL to LFPG. Keyed by guide procedure id. */
-const A320_SCRIPTS: Record<string, ProcedureScript> = {
-  init: { requires: [], phase: 'preflight' },
-  departure: {
-    requires: ['init'],
-    phase: 'preflight',
-    steps: {
-      3: { keys: [beside('27R')] },
-      4: { keys: [beside('DVR5J')] },
-    },
-  },
-  route: {
-    requires: ['init', 'departure'],
-    phase: 'preflight',
-    steps: {
-      0: { keys: [k('F-PLN'), beside('DVR')] },
-      1: { keys: [beside('AIRWAYS')] },
-      5: { ack: 'This route has no direct legs, so there is nothing to add here.' },
-      6: { ack: 'The discontinuity after NATEB is next. The following procedure clears it.' },
-    },
-  },
-  discontinuity: {
-    requires: ['init', 'departure', 'route'],
-    phase: 'preflight',
-    steps: {
-      1: { keys: [k('CLR'), beside('DISCONTINUITY')] },
-      2: { ack: 'This version removes the discontinuity straight away, so there is no TMPY INSERT to press.' },
-    },
-  },
-  fuel: {
-    requires: ['init', 'departure', 'route', 'discontinuity'],
-    phase: 'preflight',
-    steps: { 3: { ack: 'TOW and LW on the right should read 68.3 and 65.9 tonnes.' } },
-  },
-  'perf-takeoff': {
-    requires: ['init', 'departure', 'route', 'discontinuity', 'fuel'],
-    phase: 'preflight',
-  },
-  arrival: {
-    requires: PREFLIGHT,
-    phase: 'cruise',
-    activeLeg: 'NATEB',
-    steps: {
-      2: { keys: [beside('ILS27R')] },
-      3: { keys: [beside('NATEB5W')] },
-      5: { ack: 'The STAR starts at NATEB, which is already in the route, so there is no gap.' },
-    },
-  },
-  'perf-approach': {
-    requires: [...PREFLIGHT, 'arrival'],
-    phase: 'descent',
-    activeLeg: 'PONAN',
-    steps: {
-      5: { ack: 'Stay with FULL for this landing.' },
-      6: { ack: 'VAPP reads 134 knots.' },
-    },
-  },
-  direct: {
-    requires: [...PREFLIGHT, 'arrival'],
-    phase: 'cruise',
-    activeLeg: 'NATEB',
-    steps: {
-      2: { ack: 'No confirmation in this version: the direct-to is already in the flight plan.' },
-      3: { ack: 'The FCU is not simulated here. In the sim, push the HDG knob.' },
-    },
-  },
-  hold: {
-    requires: [...PREFLIGHT, 'arrival'],
-    phase: 'cruise',
-    activeLeg: 'NATEB',
-    steps: {
-      0: { keys: [k('F-PLN'), beside('NATEB')] },
-      1: { keys: [beside('HOLD')] },
-      2: { ack: 'The computed hold matches the chart: inbound 271°, right turns, one minute legs.' },
-    },
-  },
+export const TRAINERS: Record<string, TrainerUnit> = {
+  [airbusTrainer.unitId]: airbusTrainer,
+  [boeingTrainer.unitId]: boeingTrainer,
 };
 
-const SCRIPTS: Record<string, Record<string, ProcedureScript>> = { 'airbus-mcdu': A320_SCRIPTS };
-
-/** A run that plays several procedures back to back, sharing one MCDU. */
-export const CHAINS: Record<string, { id: string; name: string; summary: string; procedures: string[] }[]> = {
-  'airbus-mcdu': [
-    {
-      id: 'preflight',
-      name: 'Full cockpit preparation',
-      summary: 'Six procedures back to back, from a blank MCDU to takeoff speeds.',
-      procedures: PREFLIGHT,
-    },
-  ],
-};
+export function getTrainer(unitId: string | undefined): TrainerUnit | undefined {
+  return unitId ? TRAINERS[unitId] : undefined;
+}
 
 export function hasTrainer(unitId: string): boolean {
-  return unitId in SCRIPTS;
+  return unitId in TRAINERS;
 }
 
+export function trainerChains(unitId: string): Chain[] {
+  return TRAINERS[unitId]?.chains ?? [];
+}
+
+/** The unit's guide procedures that have a script, in guide order. */
 export function trainerProcedures(unitId: string): FmsProcedure[] {
   const unit = AVIONICS.find((u) => u.id === unitId);
-  const scripts = SCRIPTS[unitId] ?? {};
+  const scripts = TRAINERS[unitId]?.scripts ?? {};
   return unit ? unit.procedures.filter((p) => p.id in scripts) : [];
+}
+
+function scriptFor(unitId: string, procedureId: string): ProcedureScript {
+  const script = TRAINERS[unitId]?.scripts[procedureId];
+  if (!script) throw new Error(`No trainer script for ${unitId}/${procedureId}`);
+  return script;
 }
 
 /* --------------------------------------------------------------- building */
@@ -160,14 +62,14 @@ export interface BuiltProcedure {
 export function buildProcedure(unitId: string, procedureId: string): BuiltProcedure {
   const unit = AVIONICS.find((u) => u.id === unitId);
   const procedure = unit?.procedures.find((p) => p.id === procedureId);
-  const script = SCRIPTS[unitId]?.[procedureId];
-  if (!procedure || !script) throw new Error(`No trainer script for ${unitId}/${procedureId}`);
+  const script = scriptFor(unitId, procedureId);
+  if (!procedure) throw new Error(`No guide procedure ${unitId}/${procedureId}`);
   return {
     procedure,
     steps: procedure.steps.map((guide, i) => {
       const override = script.steps?.[i];
       if (override?.ack) return { guide, actions: [], ack: override.ack };
-      return { guide, actions: override?.keys ?? (guide.keys ?? []).map(k) };
+      return { guide, actions: override?.keys ?? (guide.keys ?? []).map((key) => ({ key })) };
     }),
   };
 }
@@ -179,55 +81,52 @@ export interface Feedback {
   text: string;
 }
 
-export interface Session {
+export interface Session<S = any> {
   unitId: string;
   runs: BuiltProcedure[];
   procIndex: number;
   stepIndex: number;
   actionIndex: number;
-  sim: McduState;
+  sim: S;
   /** Wrong presses across the whole session. */
   mistakes: number;
   /** Wrong presses on the current action, for revealing hints. */
   missesHere: number;
+  /**
+   * What the scratchpad held after the last accepted key in this step. A key
+   * that copies something there (a waypoint, a position) makes it fair game
+   * for the next key in the same step.
+   */
+  carry?: string;
   feedback?: Feedback;
   finished: boolean;
 }
 
-/** The MCDU as it would be after the procedures a script requires, in its phase. */
-export function initialSim(unitId: string, procedureIds: string[]): McduState {
-  const first = SCRIPTS[unitId]?.[procedureIds[0]];
-  if (!first) throw new Error(`No trainer script for ${unitId}/${procedureIds[0]}`);
-  let sim = INITIAL_STATE;
+/** The unit as it would be after the procedures a script requires, in its phase. */
+export function initialSim(unitId: string, procedureIds: string[]): any {
+  const trainer = TRAINERS[unitId];
+  const first = scriptFor(unitId, procedureIds[0]);
+  let sim = trainer.sim.initial;
   for (const id of first.requires) sim = autoplay(unitId, id, sim);
-  return enterPhase(sim, first);
+  return trainer.sim.enterPhase(sim, first.phase, first.activeLeg, first.continues);
 }
 
-function enterPhase(sim: McduState, script: ProcedureScript): McduState {
-  const active = script.activeLeg ? sim.plan.findIndex((leg) => leg.ident === script.activeLeg) : -1;
-  return {
-    ...sim,
-    phase: script.phase,
-    active: active >= 0 ? active : undefined,
-    page: script.phase === 'preflight' ? 'MENU' : 'F-PLN',
-    scratchpad: '',
-    message: undefined,
-    scroll: 0,
-  };
-}
-
-export function createSession(unitId: string, procedureIds: string[]): Session {
+function newSession(unitId: string, procedureIds: string[], sim: unknown): Session {
   return {
     unitId,
     runs: procedureIds.map((id) => buildProcedure(unitId, id)),
     procIndex: 0,
     stepIndex: 0,
     actionIndex: 0,
-    sim: initialSim(unitId, procedureIds),
+    sim,
     mistakes: 0,
     missesHere: 0,
     finished: false,
   };
+}
+
+export function createSession(unitId: string, procedureIds: string[]): Session {
+  return newSession(unitId, procedureIds, initialSim(unitId, procedureIds));
 }
 
 export function currentStep(session: Session): BuiltStep | undefined {
@@ -235,33 +134,52 @@ export function currentStep(session: Session): BuiltStep | undefined {
 }
 
 export function screenOf(session: Session): McduScreen {
-  return render(session.sim);
+  return TRAINERS[session.unitId].sim.render(session.sim);
 }
 
-/** Tokens for the text beside a line select key, for matching `beside` actions. */
-function tokens(text: string | undefined): string[] {
-  return (text ?? '').split(/[^A-Z0-9]+/).filter(Boolean);
+export function litKeys(session: Session): string[] {
+  return TRAINERS[session.unitId].sim.lit?.(session.sim) ?? [];
+}
+
+/** Words in some screen text, for matching `beside` targets whole-word. */
+function words(text: string | undefined): string {
+  return ` ${(text ?? '').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean).join(' ')} `;
+}
+
+function contains(text: string | undefined, target: string): boolean {
+  const wanted = words(target).trim();
+  return wanted.length > 0 && words(text).includes(` ${wanted} `);
 }
 
 /**
  * The line select key beside some text on the screen, or undefined if it is
- * not showing (scrolled off, or on another page).
+ * not showing (scrolled off, or on another page). Values are searched before
+ * labels, so a label only decides when no value matches.
  */
-export function lskBeside(screen: McduScreen, text: string): string | undefined {
+export function lskBeside(screen: McduScreen, target: string, only?: 'label'): string | undefined {
+  if (only !== 'label') {
+    for (let i = 0; i < 6; i += 1) {
+      const line = screen.lines[i];
+      if (contains(line.valueL?.text, target) || contains(line.valueC?.text, target)) return `LSK ${i + 1}L`;
+      if (contains(line.valueR?.text, target)) return `LSK ${i + 1}R`;
+    }
+  }
   for (let i = 0; i < 6; i += 1) {
     const line = screen.lines[i];
-    if ([line.valueL, line.valueC].some((c) => tokens(c?.text).includes(text))) return `LSK ${i + 1}L`;
-    if (tokens(line.valueR?.text).includes(text)) return `LSK ${i + 1}R`;
+    if (contains(line.labelL?.text, target) || contains(line.labelC?.text, target)) return `LSK ${i + 1}L`;
+    if (contains(line.labelR?.text, target)) return `LSK ${i + 1}R`;
   }
   return undefined;
 }
 
+function resolve(session: Session, action: TrainerAction): string | undefined {
+  return 'key' in action ? action.key : lskBeside(screenOf(session), action.beside, action.in);
+}
+
 /** The key the current action wants, resolved against the screen. */
 export function expectedKey(session: Session): string | undefined {
-  const step = currentStep(session);
-  const action = step?.actions[session.actionIndex];
-  if (!action) return undefined;
-  return 'key' in action ? action.key : lskBeside(screenOf(session), action.beside);
+  const action = currentStep(session)?.actions[session.actionIndex];
+  return action ? resolve(session, action) : undefined;
 }
 
 /** Whether the step wants its entry in the scratchpad when this action's key is pressed. */
@@ -276,55 +194,55 @@ const normalise = (text: string) => text.trim().toUpperCase().replace(/\s+/g, ' 
 
 function advance(session: Session): Session {
   const run = session.runs[session.procIndex];
-  const nextStep = session.stepIndex + 1;
-  if (nextStep < run.steps.length) {
-    return { ...session, stepIndex: nextStep, actionIndex: 0, missesHere: 0 };
+  // `carry` survives into the next step: a guide may copy in one step and use it in the next.
+  const reset = { actionIndex: 0, missesHere: 0 };
+  if (session.stepIndex + 1 < run.steps.length) {
+    return { ...session, ...reset, stepIndex: session.stepIndex + 1 };
   }
-  const nextProc = session.procIndex + 1;
-  if (nextProc < session.runs.length) {
-    const script = SCRIPTS[session.unitId][session.runs[nextProc].procedure.id];
-    return {
-      ...session,
-      procIndex: nextProc,
-      stepIndex: 0,
-      actionIndex: 0,
-      missesHere: 0,
-      sim: { ...session.sim, phase: script.phase },
-    };
+  if (session.procIndex + 1 < session.runs.length) {
+    return { ...session, ...reset, procIndex: session.procIndex + 1, stepIndex: 0 };
   }
-  return { ...session, finished: true, missesHere: 0 };
+  return { ...session, ...reset, finished: true };
 }
 
 function wrong(session: Session, text: string): Session {
-  return { ...session, mistakes: session.mistakes + 1, missesHere: session.missesHere + 1, feedback: { kind: 'error', text } };
+  return {
+    ...session,
+    mistakes: session.mistakes + 1,
+    missesHere: session.missesHere + 1,
+    feedback: { kind: 'error', text },
+  };
 }
 
 export function press(session: Session, key: string): Session {
   if (session.finished) return session;
   const step = currentStep(session);
   if (!step) return session;
+  const { sim } = TRAINERS[session.unitId];
   const action = step.actions[session.actionIndex];
 
-  // Typing and scrolling are never wrong; the scratchpad is checked when it is used.
+  // Typing and paging are never wrong; the scratchpad is checked when it is used.
   const expected = expectedKey(session);
-  const free = isTypingKey(key) || ((key === '↑' || key === '↓') && expected !== key) || (key === 'CLR' && expected !== 'CLR');
-  if (free) return { ...session, sim: pressKey(session.sim, key), feedback: undefined };
+  const free =
+    sim.isTypingKey(key) ||
+    (sim.scrollKeys.includes(key) && expected !== key) ||
+    (key === 'CLR' && expected !== 'CLR');
+  if (free) return { ...session, sim: sim.press(session.sim, key), feedback: undefined };
 
   if (!action) {
     return { ...session, feedback: { kind: 'info', text: 'Nothing to press for this step. Tap Continue.' } };
   }
 
   if (!expected) {
-    // A `beside` target that is not on screen: almost always scrolled off.
+    // A `beside` target that is not on screen: almost always paged or scrolled off.
     const target = 'beside' in action ? action.beside : '';
-    return wrong(session, `${target} is not on screen. Scroll with ↑ and ↓ until it is.`);
+    const [back, forward] = sim.scrollKeys;
+    return wrong(session, `${target} is not on screen. Page through with ${back} and ${forward} until it is.`);
   }
 
-  if (key !== expected) {
-    return wrong(session, `That was ${key}.`);
-  }
+  if (key !== expected) return wrong(session, `That was ${key}.`);
 
-  const scratchpad = normalise(session.sim.scratchpad);
+  const scratchpad = normalise(sim.scratchpad(session.sim));
   if (entryDueNow(step, session.actionIndex, key)) {
     const entry = normalise(step.guide.entry!);
     if (scratchpad !== entry) {
@@ -338,12 +256,22 @@ export function press(session: Session, key: string): Session {
         },
       };
     }
-  } else if (key.startsWith('LSK ') && scratchpad && !(scratchpad === 'CLR' && step.actions.some((a) => 'key' in a && a.key === 'CLR'))) {
-    return { ...session, feedback: { kind: 'error', text: 'Clear the scratchpad with CLR first, or this key will try to enter it.' } };
+  } else if (key.startsWith('LSK ') && scratchpad && scratchpad !== normalise(session.carry ?? '')) {
+    return {
+      ...session,
+      feedback: { kind: 'error', text: 'Clear the scratchpad with CLR first, or this key will try to enter it.' },
+    };
   }
 
-  const sim = pressKey(session.sim, key);
-  const moved = { ...session, sim, feedback: undefined, missesHere: 0, actionIndex: session.actionIndex + 1 };
+  const next = sim.press(session.sim, key);
+  const moved: Session = {
+    ...session,
+    sim: next,
+    feedback: undefined,
+    missesHere: 0,
+    carry: sim.scratchpad(next) || undefined,
+    actionIndex: session.actionIndex + 1,
+  };
   return moved.actionIndex >= step.actions.length ? advance(moved) : moved;
 }
 
@@ -357,39 +285,42 @@ export function acknowledge(session: Session): Session {
 /* --------------------------------------------------------------- autoplay */
 
 /**
- * Plays a procedure's script without a person: types each entry and presses
- * each key, scrolling to find `beside` targets. Throws if the script cannot
- * be followed, which is how the tests prove every script works.
+ * Plays a procedure's script without a person: types each entry, presses
+ * each key, and pages forward to find `beside` targets. Throws if the script
+ * cannot be followed or the unit refuses an entry, which is how the tests
+ * prove every script works.
  */
 export function autoplay(
   unitId: string,
   procedureId: string,
-  from: McduState,
+  from: unknown,
   observe?: (screen: McduScreen, key: string) => void,
-): McduState {
-  const script = SCRIPTS[unitId]?.[procedureId];
-  if (!script) throw new Error(`No trainer script for ${unitId}/${procedureId}`);
-  let session = createSessionFrom(unitId, procedureId, enterPhase(from, script));
-  let guard = 0;
-  while (!session.finished) {
-    if ((guard += 1) > 500) throw new Error(`${procedureId}: autoplay did not finish`);
+): any {
+  const trainer = TRAINERS[unitId];
+  const script = scriptFor(unitId, procedureId);
+  let session = newSession(unitId, [procedureId], trainer.sim.enterPhase(from, script.phase, script.activeLeg, script.continues));
+  const forward = trainer.sim.scrollKeys[1];
+  for (let guard = 0; !session.finished; guard += 1) {
+    if (guard > 500) throw new Error(`${procedureId}: autoplay did not finish`);
     const step = currentStep(session)!;
     if (step.actions.length === 0) {
       session = acknowledge(session);
       continue;
     }
-    const action = step.actions[session.actionIndex];
-    if (session.actionIndex === 0 && step.guide.entry && normalise(session.sim.scratchpad) !== normalise(step.guide.entry)) {
+    if (
+      session.actionIndex === 0 &&
+      step.guide.entry &&
+      normalise(trainer.sim.scratchpad(session.sim)) !== normalise(step.guide.entry)
+    ) {
       // Type the entry the way a person would, one key at a time.
-      for (const char of step.guide.entry.toUpperCase()) {
-        session = press(session, char === ' ' ? 'SP' : char);
-      }
+      for (const char of step.guide.entry.toUpperCase()) session = press(session, char === ' ' ? 'SP' : char);
     }
     let key = expectedKey(session);
-    for (let scrolls = 0; !key && scrolls < 20; scrolls += 1) {
-      session = press(session, '↓');
+    for (let pages = 0; !key && pages < 20; pages += 1) {
+      session = press(session, forward);
       key = expectedKey(session);
     }
+    const action = step.actions[session.actionIndex];
     if (!key) throw new Error(`${procedureId} step ${session.stepIndex}: cannot find ${JSON.stringify(action)}`);
     observe?.(screenOf(session), key);
     const before = session;
@@ -397,24 +328,11 @@ export function autoplay(
     if (session.feedback?.kind === 'error' || session === before) {
       throw new Error(`${procedureId} step ${before.stepIndex}: ${key} rejected: ${session.feedback?.text ?? 'no change'}`);
     }
-    if (session.sim.message) {
-      // The trainer accepted the key but the MCDU refused the entry: the script and the sim disagree.
-      throw new Error(`${procedureId} step ${before.stepIndex}: MCDU says ${session.sim.message} after ${key}`);
+    const message = trainer.sim.message(session.sim);
+    if (message) {
+      // The trainer accepted the key but the unit refused the entry: the script and the sim disagree.
+      throw new Error(`${procedureId} step ${before.stepIndex}: unit says ${message} after ${key}`);
     }
   }
   return session.sim;
-}
-
-function createSessionFrom(unitId: string, procedureId: string, sim: McduState): Session {
-  return {
-    unitId,
-    runs: [buildProcedure(unitId, procedureId)],
-    procIndex: 0,
-    stepIndex: 0,
-    actionIndex: 0,
-    sim,
-    mistakes: 0,
-    missesHere: 0,
-    finished: false,
-  };
 }

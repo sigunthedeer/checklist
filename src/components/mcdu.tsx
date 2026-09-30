@@ -1,7 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import type { McduCell, McduColor, McduLine, McduScreen } from '@/trainer/mcdu';
-import { FUNCTION_ROWS, LETTER_ROWS, NUMBER_ROWS } from '@/trainer/keyboard';
+import type { KeyboardLayout, McduCell, McduColor, McduLine, McduScreen } from '@/trainer/screen';
 import { useTheme } from '@/state/settings';
 import { MONO } from '@/theme';
 
@@ -19,7 +18,10 @@ const HW = {
     green: '#3DDC84',
     amber: '#F5A623',
     yellow: '#F0DC4A',
+    magenta: '#E26BE2',
   } satisfies Record<McduColor, string>,
+  /** An annunciator that is on, such as EXEC waiting for a press. */
+  lamp: '#F4F1DC',
 };
 
 const COLUMNS = 24;
@@ -176,12 +178,14 @@ function Key({
   onPress,
   highlighted,
   flashing,
+  lit,
   height,
 }: {
   label: string;
   onPress: (key: string) => void;
   highlighted: boolean;
   flashing: boolean;
+  lit: boolean;
   height: number;
 }) {
   const palette = usePalette();
@@ -192,7 +196,8 @@ function Key({
     <Pressable
       onPress={() => onPress(label)}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      // react-native-web drops accessibilityHint, so the lamp goes in the label where a screen reader reads it.
+      accessibilityLabel={lit ? `${label}, lit` : label}
       style={({ pressed }) => [
         styles.key,
         {
@@ -203,6 +208,7 @@ function Key({
         },
       ]}
     >
+      {lit ? <View style={[styles.lamp, { backgroundColor: palette.night ? palette.highlight : HW.lamp }]} /> : null}
       <Text
         numberOfLines={2}
         style={[styles.keyText, { color: palette.keyText, fontSize: word ? 9.5 : 15, lineHeight: word ? 11 : 17 }]}
@@ -214,13 +220,18 @@ function Key({
 }
 
 export const McduKeyboard = memo(function McduKeyboard({
+  layout,
   onKey,
   highlight,
   flash,
+  lit,
 }: {
+  layout: KeyboardLayout;
   onKey: (key: string) => void;
   highlight?: string;
   flash?: string;
+  /** Keys whose annunciator is on. */
+  lit?: string[];
 }) {
   const [width, setWidth] = useState(0);
   const height = Math.max(30, Math.min(36, Math.round(width / 11)));
@@ -233,6 +244,7 @@ export const McduKeyboard = memo(function McduKeyboard({
           onPress={onKey}
           highlighted={highlight === key}
           flashing={flash === key}
+          lit={!!lit?.includes(key)}
           height={height}
         />
       ))}
@@ -240,10 +252,10 @@ export const McduKeyboard = memo(function McduKeyboard({
   );
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={[styles.keyboard, { backgroundColor: HW.bezel }]}>
-      {FUNCTION_ROWS.map(row)}
+      {layout.functionRows.map(row)}
       <View style={styles.pads}>
-        <View style={[styles.pad, { flex: 3 }]}>{NUMBER_ROWS.map(row)}</View>
-        <View style={[styles.pad, { flex: 5 }]}>{LETTER_ROWS.map(row)}</View>
+        <View style={[styles.pad, { flex: 3 }]}>{layout.numberRows.map(row)}</View>
+        <View style={[styles.pad, { flex: 5 }]}>{layout.letterRows.map(row)}</View>
       </View>
     </View>
   );
@@ -292,6 +304,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     paddingHorizontal: 2,
   },
+  lamp: { position: 'absolute', top: 3, left: '30%', right: '30%', height: 3, borderRadius: 2 },
   keySpacer: { backgroundColor: 'transparent', borderWidth: 0, borderBottomWidth: 0 },
   keyText: { fontWeight: '700', textAlign: 'center', fontFamily: MONO },
   pads: { flexDirection: 'row', gap: 10, marginTop: 4 },
