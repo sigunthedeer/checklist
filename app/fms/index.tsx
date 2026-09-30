@@ -4,6 +4,7 @@ import { router, Stack } from 'expo-router';
 import { ContentWidth, Screen } from '@/components/layout';
 import { Data, Label, Panel, Row, SectionHeader, T } from '@/components/ui';
 import { AVIONICS, aircraftUsing } from '@/data';
+import { hasTrainer } from '@/trainer/session';
 import { useTheme } from '@/state/settings';
 import { SPACE } from '@/theme';
 
@@ -66,6 +67,31 @@ export default function FmsIndexScreen() {
             })}
           </Panel>
 
+          <SectionHeader style={styles.practise}>Practise</SectionHeader>
+          <Panel>
+            {AVIONICS.filter((unit) => hasTrainer(unit.id)).map((unit, i) => (
+              <Row
+                key={unit.id}
+                first={i === 0}
+                onPress={() => router.push(`/trainer/${unit.id}`)}
+                style={styles.unitRow}
+                accessibilityLabel={`${unit.short} trainer`}
+              >
+                <View style={styles.grow}>
+                  <T size={16} weight="700">
+                    {unit.name} trainer
+                  </T>
+                  <T size={12} color={theme.textDim} style={styles.fleet}>
+                    A simulated {unit.short} you can press, with feedback on every key
+                  </T>
+                </View>
+                <T size={15} color={theme.textFaint}>
+                  {'›'}
+                </T>
+              </Row>
+            ))}
+          </Panel>
+
           <Label style={styles.footer}>Simulator use only</Label>
         </ContentWidth>
       </ScrollView>
@@ -82,5 +108,6 @@ const styles = StyleSheet.create({
   unitRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
   unitTop: { flexDirection: 'row', alignItems: 'baseline', gap: SPACE.sm },
   fleet: { marginTop: 3, lineHeight: 17 },
+  practise: { marginTop: SPACE.xl },
   footer: { textAlign: 'center', marginTop: SPACE.xl },
 });

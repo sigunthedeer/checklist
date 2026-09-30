@@ -6,6 +6,7 @@ import { FmsStepRow } from '@/components/fms';
 import { ContentWidth, Screen } from '@/components/layout';
 import { Button, Data, Label, Meter, Panel, T } from '@/components/ui';
 import { getAvionics, getProcedure } from '@/data';
+import { trainerProcedures } from '@/trainer/session';
 import { useSettings, useTheme } from '@/state/settings';
 import { accentFor, PHASE_COLOR, PHASE_LABEL, SPACE } from '@/theme';
 
@@ -132,6 +133,15 @@ export default function ProcedureScreen() {
             ))}
           </Panel>
 
+          {trainerProcedures(unit.id).some((p) => p.id === procedure.id) ? (
+            <Button
+              label="Practise on the trainer"
+              variant="outline"
+              onPress={() => router.push(`/trainer/${unit.id}/${procedure.id}`)}
+              style={styles.practise}
+            />
+          ) : null}
+
           <View style={styles.nav}>
             {previous ? (
               <Button
@@ -180,7 +190,8 @@ const styles = StyleSheet.create({
   summary: { marginTop: SPACE.xs, lineHeight: 20 },
   progress: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginBottom: SPACE.md },
   meter: { flex: 1 },
-  nav: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg },
+  practise: { marginTop: SPACE.lg },
+  nav: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.sm },
   navButton: { flex: 1 },
   footer: { textAlign: 'center', marginTop: SPACE.xl },
 });

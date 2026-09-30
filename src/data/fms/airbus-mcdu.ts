@@ -275,8 +275,8 @@ export const airbusMcdu: Avionics = {
       summary: 'The STAR and approach, done before the top of descent.',
       steps: [
         {
-          do: 'On F-PLN, scroll down to the destination airport and press the key beside it.',
-          keys: ['F-PLN'],
+          do: 'On F-PLN, press the key beside the destination on the bottom line, under DEST.',
+          keys: ['F-PLN', 'LSK 6L'],
           expect: 'LAT REV FROM the destination.',
         },
         { do: 'Press ARRIVAL.', keys: ['LSK 1R'] },

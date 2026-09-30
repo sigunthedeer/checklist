@@ -4,6 +4,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
 import { Button, Data, Label, Panel, Row, SectionHeader, T } from '@/components/ui';
 import { aircraftUsing, getAvionics } from '@/data';
+import { hasTrainer } from '@/trainer/session';
 import { useTheme } from '@/state/settings';
 import { accentFor, PHASE_COLOR, PHASE_LABEL, SPACE } from '@/theme';
 
@@ -28,6 +29,32 @@ export default function AvionicsScreen() {
   }
 
   const fleet = aircraftUsing(unit.id);
+
+  const trainer = hasTrainer(unit.id) ? (
+    <View style={styles.section}>
+      <SectionHeader>Practise</SectionHeader>
+      <Panel>
+        <Row
+          first
+          onPress={() => router.push(`/trainer/${unit.id}`)}
+          style={styles.fleetRow}
+          accessibilityLabel={`${unit.short} trainer`}
+        >
+          <View style={styles.grow}>
+            <T size={15} weight="700">
+              {unit.short} trainer
+            </T>
+            <T size={12} color={theme.textDim} style={{ marginTop: 3 }}>
+              Press the real keys on a simulated {unit.short}, with feedback on every press
+            </T>
+          </View>
+          <T size={15} color={theme.textFaint}>
+            {'›'}
+          </T>
+        </Row>
+      </Panel>
+    </View>
+  ) : null;
 
   const procedures = (
     <View style={styles.section}>
@@ -167,11 +194,15 @@ export default function AvionicsScreen() {
 
           {isWide ? (
             <View style={styles.twoPane}>
-              <View style={styles.pane}>{procedures}</View>
+              <View style={styles.pane}>
+                {trainer}
+                {procedures}
+              </View>
               <View style={styles.pane}>{reference}</View>
             </View>
           ) : (
             <>
+              {trainer}
               {procedures}
               {reference}
             </>
