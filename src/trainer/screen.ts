@@ -138,3 +138,15 @@ export interface GarminScreen {
     window?: { title: string; rows: GarminRow[] };
   };
 }
+
+/** What a GNS 530/430 trainer draws: the radio column beside the navigator page. */
+export interface GnsScreen {
+  radios: { comActive: string; comStandby: string; navActive: string; navStandby: string };
+  /** What the CDI key has selected, printed above it: GPS or VLOC. */
+  cdi: string;
+  page: {
+    title: string;
+    rows: GarminRow[];
+    window?: { title: string; rows: GarminRow[] };
+  };
+}

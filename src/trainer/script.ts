@@ -56,7 +56,7 @@ export interface TrainerUnit<S = any> {
   unitId: string;
   sim: import('./screen').TrainerSim<S, any>;
   /** How the unit is drawn: a CDU with line select keys (the default), or a Garmin display and bezel. */
-  display?: 'cdu' | 'garmin';
+  display?: 'cdu' | 'garmin' | 'gns';
   keyboard: import('./screen').KeyboardLayout;
   /** Keyed by guide procedure id. A procedure without one is not trainable. */
   scripts: Record<string, ProcedureScript>;

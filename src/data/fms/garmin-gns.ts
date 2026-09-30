@@ -28,13 +28,19 @@ export const garminGns: Avionics = {
         { do: 'Push the right knob to show the cursor.', keys: ['PUSH CRSR'] },
         { do: 'Turn the right inner knob to open the entry.', keys: ['Right inner'] },
         {
-          do: 'Spell the departure airport: the inner knob picks each letter, the outer knob moves to the next. Press ENT.',
+          do: 'Spell the departure airport: the inner knob picks each letter, the outer knob moves to the next. Press ENT, then ENT again on the waypoint page to add it.',
           entry: 'KPAE',
-          keys: ['ENT'],
+          keys: ['ENT', 'ENT'],
           note: 'Example.',
-          expect: 'The waypoint page, to confirm you have the right one. Press ENT again to add it.',
+          why: 'The GNS shows the waypoint first so you can check it is the one you meant: several places share some idents.',
         },
-        { do: 'Repeat for each waypoint along the route, finishing with the destination airport.' },
+        { do: 'Turn the right inner knob again to open the entry for the next waypoint.', keys: ['Right inner'] },
+        {
+          do: 'Spell it and press ENT twice. Repeat for each waypoint along the route, finishing with the destination airport.',
+          entry: 'KSEA',
+          keys: ['ENT', 'ENT'],
+          note: 'Example: Seattle-Tacoma, a short hop south.',
+        },
         {
           do: 'Push the right knob to remove the cursor.',
           keys: ['PUSH CRSR'],

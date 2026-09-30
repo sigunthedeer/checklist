@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Entry, KeyCap } from '@/components/fms';
 import { ContentWidth, Screen, useResponsive } from '@/components/layout';
-import { GarminPanel } from '@/components/garmin';
+import { GarminPanel, GnsPanel } from '@/components/garmin';
 import { McduKeyboard, McduScreenView, useFlash } from '@/components/mcdu';
 import { Button, Data, Label, Meter, Panel, Row, Segmented, T } from '@/components/ui';
 import { useSettings, useTheme } from '@/state/settings';
@@ -274,6 +274,10 @@ export default function TrainerRunScreen() {
     trainer.display === 'garmin' ? (
       <View style={styles.mcdu}>
         <GarminPanel screen={screen} layout={trainer.keyboard} onKey={onKey} highlight={highlight} flash={flash} />
+      </View>
+    ) : trainer.display === 'gns' ? (
+      <View style={styles.mcdu}>
+        <GnsPanel screen={screen} layout={trainer.keyboard} onKey={onKey} highlight={highlight} flash={flash} />
       </View>
     ) : (
       <View style={styles.mcdu}>

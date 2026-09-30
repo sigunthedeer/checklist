@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { GarminRow, GarminScreen, KeyboardLayout, McduCell } from '@/trainer/screen';
+import type { GarminRow, GarminScreen, GnsScreen, KeyboardLayout, McduCell } from '@/trainer/screen';
 import { MONO } from '@/theme';
 import { HW, usePalette } from './mcdu';
 
@@ -119,24 +119,82 @@ function Key({
   );
 }
 
-/** The dual concentric FMS knob, drawn as its four turns and the push in the middle. */
-function Knob({ onKey, highlight, flash }: { onKey: (key: string) => void; highlight?: string; flash?: string }) {
+/**
+ * The dual concentric knob, drawn as its four turns and the push in the middle.
+ * `keys` is the unit's knob row: outer back, outer on, inner back, inner on, push.
+ */
+function Knob({
+  keys,
+  name,
+  onKey,
+  highlight,
+  flash,
+}: {
+  keys: string[];
+  name: string;
+  onKey: (key: string) => void;
+  highlight?: string;
+  flash?: string;
+}) {
   const palette = usePalette();
+  const [outerBack, outerOn, innerBack, innerOn, push] = keys;
   const props = { onKey, highlight, flash, round: true, height: 40 };
   return (
     <View style={styles.knob}>
       <View style={styles.knobRow}>
-        <Key id="FMS outer ↺" label="↺" {...props} />
+        <Key id={outerBack} label="↺" {...props} />
         <Text style={[styles.knobLabel, { color: palette.keyText }]}>OUTER</Text>
-        <Key id="FMS outer" label="↻" {...props} />
+        <Key id={outerOn} label="↻" {...props} />
       </View>
       <View style={styles.knobRow}>
-        <Key id="FMS inner ↺" label="↺" {...props} />
-        <Key id="PUSH CRSR" label="PUSH CRSR" {...props} height={48} />
-        <Key id="FMS inner" label="↻" {...props} />
+        <Key id={innerBack} label="↺" {...props} />
+        <Key id={push} label={push} {...props} height={48} />
+        <Key id={innerOn} label="↻" {...props} />
       </View>
-      <Text style={[styles.knobLabel, { color: palette.keyText }]}>INNER · FMS</Text>
+      <Text style={[styles.knobLabel, { color: palette.keyText }]}>INNER · {name}</Text>
     </View>
+  );
+}
+
+function Shortcut({ layout, ...keyProps }: { layout: KeyboardLayout; onKey: (key: string) => void; highlight?: string; flash?: string }) {
+  const palette = usePalette();
+  return (
+    <>
+      <Text style={[styles.shortcutLabel, { color: palette.keyText }]}>
+        SPELLING SHORTCUT · stands in for turning the inner knob to each letter
+      </Text>
+      {[...layout.numberRows, ...layout.letterRows].map((row, i) => (
+        <View key={i} style={styles.keyRow}>
+          {row.map((key) => (
+            <Key key={key} id={key} label={key} {...keyProps} height={30} />
+          ))}
+        </View>
+      ))}
+    </>
+  );
+}
+
+function PageView({ page, size }: { page: GarminScreen['mfd']; size: number }) {
+  const palette = usePalette();
+  return (
+    <>
+      <Text style={[styles.mono, styles.title, { color: palette.text('white') }]} numberOfLines={1}>
+        {page.title}
+      </Text>
+      <View style={[styles.content, { minHeight: 0 }]}>
+        {page.rows.map((row, i) => (
+          <Row key={i} row={row} size={size} />
+        ))}
+        {page.window ? (
+          <View style={[styles.window, { backgroundColor: HW.glass, borderColor: palette.text('cyan') }]}>
+            <Text style={[styles.mono, styles.windowTitle, { color: palette.text('cyan') }]}>{page.window.title}</Text>
+            {page.window.rows.map((row, i) => (
+              <Row key={i} row={row} size={size} />
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </>
   );
 }
 
@@ -153,31 +211,15 @@ export const GarminPanel = memo(function GarminPanel({
   highlight?: string;
   flash?: string;
 }) {
-  const palette = usePalette();
-  const [autopilot, hard, , softkeys] = layout.functionRows;
+  const [autopilot, hard, knob, softkeys] = layout.functionRows;
   const size = 13;
   const keyProps = { onKey, highlight, flash };
   return (
     <View style={[styles.bezel, { backgroundColor: HW.bezel }]}>
       <Pfd pfd={screen.pfd} />
 
-      <View style={[styles.mfd, { backgroundColor: HW.glass }]}>
-        <Text style={[styles.mono, styles.title, { color: palette.text('white') }]} numberOfLines={1}>
-          {screen.mfd.title}
-        </Text>
-        <View style={styles.content}>
-          {screen.mfd.rows.map((row, i) => (
-            <Row key={i} row={row} size={size} />
-          ))}
-          {screen.mfd.window ? (
-            <View style={[styles.window, { backgroundColor: HW.glass, borderColor: palette.text('cyan') }]}>
-              <Text style={[styles.mono, styles.windowTitle, { color: palette.text('cyan') }]}>{screen.mfd.window.title}</Text>
-              {screen.mfd.window.rows.map((row, i) => (
-                <Row key={i} row={row} size={size} />
-              ))}
-            </View>
-          ) : null}
-        </View>
+      <View style={[styles.mfd, styles.mfdHeight, { backgroundColor: HW.glass }]}>
+        <PageView page={screen.mfd} size={size} />
       </View>
 
       <View style={styles.keyRow}>
@@ -202,19 +244,91 @@ export const GarminPanel = memo(function GarminPanel({
             </View>
           ))}
         </View>
-        <Knob {...keyProps} />
+        <Knob keys={knob} name="FMS" {...keyProps} />
       </View>
 
-      <Text style={[styles.shortcutLabel, { color: palette.keyText }]}>
-        SPELLING SHORTCUT · stands in for turning the inner knob to each letter
-      </Text>
-      {[...layout.numberRows, ...layout.letterRows].map((row, i) => (
-        <View key={i} style={styles.keyRow}>
-          {row.map((key) => (
-            <Key key={key} id={key} label={key} {...keyProps} height={30} />
-          ))}
+      <Shortcut layout={layout} {...keyProps} />
+    </View>
+  );
+});
+
+/**
+ * The GNS 530: radios down the left of the screen, the navigator page beside
+ * them, keys along the bottom and down the right, and the right-hand knob.
+ */
+export const GnsPanel = memo(function GnsPanel({
+  screen,
+  layout,
+  onKey,
+  highlight,
+  flash,
+}: {
+  screen: GnsScreen;
+  layout: KeyboardLayout;
+  onKey: (key: string) => void;
+  highlight?: string;
+  flash?: string;
+}) {
+  const palette = usePalette();
+  const [bottom, right, knob, flipFlops] = layout.functionRows;
+  const keyProps = { onKey, highlight, flash };
+  const c = (colour: keyof typeof HW.screen) => ({ color: palette.text(colour) });
+  const radio = (label: string, active: string, standby: string) => (
+    <View style={styles.radio}>
+      <Text style={[styles.mono, styles.tiny, c('white')]}>{label}</Text>
+      <Text style={[styles.mono, styles.small, c('green')]}>{active}</Text>
+      <Text style={[styles.mono, styles.small, c('white')]}>{standby}</Text>
+    </View>
+  );
+  return (
+    <View style={[styles.bezel, { backgroundColor: HW.bezel }]}>
+      <View style={[styles.gnsScreen, { backgroundColor: HW.glass }]}>
+        <View style={[styles.radios, { borderRightColor: palette.text('white') }]}>
+          {radio('COM', screen.radios.comActive, screen.radios.comStandby)}
+          {radio('VLOC', screen.radios.navActive, screen.radios.navStandby)}
         </View>
-      ))}
+        <View style={styles.gnsPage}>
+          <PageView page={screen.page} size={12} />
+        </View>
+      </View>
+
+      <View style={styles.keyRow}>
+        {bottom.map((key) => (
+          <View key={key} style={styles.grow}>
+            {key === 'CDI' ? (
+              <Text style={[styles.mono, styles.tiny, styles.annunciator, c(screen.cdi === 'GPS' ? 'magenta' : 'green')]}>
+                {screen.cdi}
+              </Text>
+            ) : (
+              <Text style={[styles.tiny, styles.annunciator]}> </Text>
+            )}
+            <Key id={key} label={key} {...keyProps} height={30} />
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.controls}>
+        <View style={styles.gnsKeys}>
+          <View style={styles.keyRow}>
+            {flipFlops.map((key) => (
+              <Key key={key} id={key} label={key} {...keyProps} />
+            ))}
+          </View>
+          <View style={styles.keyRow}>
+            {right.slice(0, 2).map((key) => (
+              <Key key={key} id={key} label={key} {...keyProps} />
+            ))}
+          </View>
+          <View style={styles.keyRow}>
+            {right.slice(2).map((key) => (
+              <Key key={key} id={key} label={key} {...keyProps} />
+            ))}
+          </View>
+        </View>
+        <Knob keys={knob} name="RIGHT" {...keyProps} />
+      </View>
+
+      <Shortcut layout={layout} {...keyProps} />
     </View>
   );
 });
@@ -231,7 +345,14 @@ const styles = StyleSheet.create({
   cdi: { alignItems: 'flex-end' },
   mfd: { borderRadius: 4, paddingHorizontal: 8, paddingTop: 4, paddingBottom: 6 },
   title: { fontSize: 11, textAlign: 'center', marginBottom: 4 },
-  content: { minHeight: 9 * 13 * 1.45 },
+  content: {},
+  mfdHeight: { minHeight: 9 * 13 * 1.45 + 24 },
+  gnsScreen: { flexDirection: 'row', borderRadius: 4, minHeight: 7 * 12 * 1.45 + 30 },
+  radios: { width: 74, paddingHorizontal: 6, paddingVertical: 6, gap: 10, borderRightWidth: StyleSheet.hairlineWidth },
+  radio: { gap: 1 },
+  gnsPage: { flex: 1, paddingHorizontal: 6, paddingTop: 4, paddingBottom: 6 },
+  gnsKeys: { flex: 1, gap: 5 },
+  annunciator: { textAlign: 'center', marginBottom: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   header: { opacity: 0.75 },
   window: {

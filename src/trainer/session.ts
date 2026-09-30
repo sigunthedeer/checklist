@@ -12,6 +12,7 @@ import { airbusTrainer } from './airbus/script';
 import { boeingTrainer } from './boeing/script';
 import { cj4Trainer } from './cj4/script';
 import { g1000Trainer } from './garmin/script';
+import { gnsTrainer } from './gns/script';
 import type { McduScreen } from './screen';
 import type { Chain, ProcedureScript, TrainerAction, TrainerUnit } from './script';
 
@@ -22,6 +23,7 @@ export const TRAINERS: Record<string, TrainerUnit> = {
   [boeingTrainer.unitId]: boeingTrainer,
   [cj4Trainer.unitId]: cj4Trainer,
   [g1000Trainer.unitId]: g1000Trainer,
+  [gnsTrainer.unitId]: gnsTrainer,
 };
 
 export function getTrainer(unitId: string | undefined): TrainerUnit | undefined {
@@ -367,6 +369,10 @@ export function autoplay(
     session = press(session, key);
     if (session.feedback?.kind === 'error' || session.mistakes > before.mistakes || session === before) {
       throw new Error(`${procedureId} step ${before.stepIndex}: ${key} rejected: ${session.feedback?.text ?? 'no change'}`);
+    }
+    if (isCommit(unitId, key) && JSON.stringify(session.sim) === JSON.stringify(before.sim)) {
+      // A committing key the script asks for should always do something; if not, script and sim disagree.
+      throw new Error(`${procedureId} step ${before.stepIndex}: ${key} changed nothing`);
     }
     const message = trainer.sim.message(session.sim);
     if (message) {
