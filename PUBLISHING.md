@@ -74,14 +74,14 @@ it is, but keep it to identification:
 > Checkride is a checklist reference for flight simulator pilots, laid out the way real
 > challenge-and-response checklists read.
 >
-> 52 aircraft. 603 checklists. Every one broken into the phases you actually fly, from cockpit
+> 53 aircraft. 621 checklists. Every one broken into the phases you actually fly, from cockpit
 > preparation through to shutdown, with the non-normal and emergency drills kept separate so you
 > never start one by accident.
 >
 > • Search by name, type code or avionics
 > • Reference speeds and type data for every aircraft
 > • Step-by-step flight management guides, key by key, for the airliner, business jet and GPS avionics
-> • Practice trainers for the Airbus MCDU, the Boeing CDU, the CJ4 FMS, the Garmin G1000 and the GNS 530: press the real keys and turn the real knobs through a whole setup, with feedback on every press
+> • Practice trainers for the Airbus MCDU (A320, A321LR, A330, BelugaXL, A310), the Boeing CDU (787, 747-8, 737 MAX), the CJ4 FMS, the Garmin G1000 and the GNS 530: press the real keys and turn the real knobs through a whole setup, with feedback on every press
 > • Progress that survives closing the app, and a new-flight reset when you are done
 > • Add your own items and notes for the aircraft you fly
 > • Beginner mode explains what each control is and where to find it

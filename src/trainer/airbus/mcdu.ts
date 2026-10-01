@@ -1,5 +1,5 @@
 /**
- * A simplified A320 MCDU. Pure functions over an immutable state: `pressKey`
+ * A simplified Airbus MCDU, as in the A320 family, A330 and A310. Pure functions over an immutable state: `pressKey`
  * returns the next state and `render` draws the screen for it.
  *
  * Only the pages the scripted procedures use are simulated, and only their
@@ -52,7 +52,32 @@ interface Temporary {
   airways?: { via?: string; to?: string }[];
 }
 
+/**
+ * What changes between Airbus types sharing this MCDU: the fuel burn the
+ * predictions use, and the approach speed and landing settings shown.
+ */
+export interface AirbusProfile {
+  /** Fuel in tonnes for the training flight. */
+  taxi: number;
+  trip: number;
+  rsv: number;
+  final: number;
+  vapp: string;
+  /** Landing settings as PERF APPR names them: the normal one, then the alternative. */
+  landing: { full: string; alt: string };
+}
+
+export const A320_PROFILE: AirbusProfile = {
+  taxi: 0.2,
+  trip: 2.4,
+  rsv: 0.1,
+  final: 1.0,
+  vapp: '134',
+  landing: { full: 'FULL', alt: 'CONF3' },
+};
+
 export interface McduState {
+  profile: AirbusProfile;
   page: Page;
   otherTitle?: string;
   scratchpad: string;
@@ -93,6 +118,7 @@ export interface McduState {
 }
 
 export const INITIAL_STATE: McduState = {
+  profile: A320_PROFILE,
   page: 'MENU',
   scratchpad: '',
   phase: 'preflight',
@@ -527,10 +553,7 @@ export function fuelFigures(s: McduState) {
   if (!s.zfw || !s.block) return undefined;
   const zfw = Number(s.zfw.split('/')[0]);
   const block = Number(s.block);
-  const taxi = 0.2;
-  const trip = 2.4;
-  const rsv = 0.1;
-  const final = 1.0;
+  const { taxi, trip, rsv, final } = s.profile;
   const tow = zfw + block - taxi;
   return { taxi, trip, rsv, final, extra: block - taxi - trip - rsv - final, tow, lw: tow - trip };
 }
@@ -827,14 +850,15 @@ function perfPage(s: McduState): Omit<McduScreen, 'scratchpad'> {
       };
     case 'APPR': {
       const appr = s.appr ?? '------';
+      const { full, alt } = s.profile.landing;
       return {
         title: cell('APPR', 'green'),
         lines: [
           { labelL: label('QNH'), valueL: entered(s.qnh, boxes(4)), labelR: label('FINAL'), valueR: cell(appr, 'green') },
           { labelL: label('TEMP'), valueL: s.temp ? cell(`${s.temp}°`, 'cyan') : cell('---°', 'cyan'), labelR: label('BARO'), valueR: entered(s.baro, cell('[    ]', 'cyan')) },
           { labelL: label('MAG WIND'), valueL: entered(s.wind, cell('---°/---', 'cyan')), labelR: label('RADIO'), valueR: cell('[    ]', 'cyan') },
-          { labelL: label('TRANS FL'), valueL: cell('FL050', 'cyan', true), labelR: label('LDG CONF'), valueR: cell(s.ldgConf === 'CONF3' ? 'CONF3' : 'CONF3*', s.ldgConf === 'CONF3' ? 'green' : 'cyan') },
-          { labelL: label('VAPP'), valueL: cell('134', 'green'), valueR: cell(s.ldgConf === 'FULL' ? 'FULL' : 'FULL*', s.ldgConf === 'FULL' ? 'green' : 'cyan') },
+          { labelL: label('TRANS FL'), valueL: cell('FL050', 'cyan', true), labelR: label('LDG CONF'), valueR: cell(s.ldgConf === 'CONF3' ? alt : `${alt}*`, s.ldgConf === 'CONF3' ? 'green' : 'cyan') },
+          { labelL: label('VAPP'), valueL: cell(s.profile.vapp, 'green'), valueR: cell(s.ldgConf === 'FULL' ? full : `${full}*`, s.ldgConf === 'FULL' ? 'green' : 'cyan') },
           { labelL: label('PREV'), valueL: cell('<PHASE') },
         ],
       };
@@ -867,6 +891,10 @@ function enterPhase(sim: McduState, phase: FlightPhase, activeLeg?: string, keep
     message: undefined,
     scroll: 0,
   };
+}
+
+export function createAirbusSim(profile: AirbusProfile): TrainerSim<McduState> {
+  return { ...airbusSim, initial: { ...INITIAL_STATE, profile } };
 }
 
 export const airbusSim: TrainerSim<McduState> = {

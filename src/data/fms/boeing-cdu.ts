@@ -2,7 +2,7 @@ import type { Avionics } from '../types';
 
 export const boeingCdu: Avionics = {
   id: 'boeing-cdu',
-  name: 'Boeing FMC and CDU',
+  name: 'Boeing 787 FMC and CDU',
   short: 'CDU',
   summary:
     'The keyboards with screens on the pedestal, one per pilot. They drive the flight management computer: position, route, weights, thrust and speeds all go in here. Changes stay provisional until you press EXEC.',
@@ -42,8 +42,8 @@ export const boeingCdu: Avionics = {
     { term: 'VREF', meaning: 'Reference landing speed for the flap setting and weight. You fly the approach slightly above it.' },
   ],
   notes: [
-    'Covers the MSFS 747-8, 787-10 and 737 MAX 8. Page layouts differ a little between them, so where a step gives no key number, press the key beside the label it names.',
-    'On the 737 the THRUST LIM page is called N1 LIMIT. It is on the same key and the steps are the same.',
+    'Written for the MSFS 787-10. The 747-8 and 737 MAX have their own versions of this guide with their numbers and page names.',
+    'Where a step gives no key number, press the key beside the label it names.',
     'A world map flight plan may be imported, but entering the route here is the dependable way to get LNAV and VNAV to behave.',
   ],
   procedures: [

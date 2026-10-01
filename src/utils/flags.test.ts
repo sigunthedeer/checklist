@@ -20,7 +20,7 @@ describe('flag report', () => {
 
   it('names guide and trainer steps by unit and procedure', () => {
     const guide = flag({ kind: 'guide', scope: 'boeing-cdu', section: 'takeoff', index: 0 });
-    expect(flagPlace(guide)).toEqual({ title: 'Boeing FMC and CDU guide · Thrust and takeoff speeds', position: 'step 1' });
+    expect(flagPlace(guide)).toEqual({ title: 'Boeing 787 FMC and CDU guide · Thrust and takeoff speeds', position: 'step 1' });
     const trainer = flag({ kind: 'trainer', scope: 'garmin-g1000', section: 'departure', index: 2 });
     expect(flagPlace(trainer).title).toBe('G1000 trainer · Load a departure');
   });

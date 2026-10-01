@@ -50,11 +50,11 @@ npx eas build -p ios --profile preview       # TestFlight or an ad-hoc build
 
 ## The fleet
 
-52 aircraft, 603 checklists, over 4,600 items, covering every category the sim flies:
+53 aircraft, 621 checklists, over 4,800 items, covering every category the sim flies:
 
 | category | aircraft |
 | --- | --- |
-| Airliners | A320neo, A321LR, A330-200/-300, A310-300, 737 MAX 8, 747-8 Intercontinental, 787-10 Dreamliner, 747-400 Supertanker |
+| Airliners | A320neo, A321LR, A330-200/-300, BelugaXL, A310-300, 737 MAX 8, 747-8 Intercontinental, 787-10 Dreamliner, 747-400 Supertanker |
 | Business jets | Citation CJ4, Citation Longitude |
 | Turboprops | TBM 930, 208B Grand Caravan EX, King Air 350i, King Air C90 GTx, 408 SkyCourier, Air Tractor AT-802 |
 | Piston twins | Baron G58, DA62 |

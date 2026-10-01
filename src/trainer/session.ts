@@ -8,8 +8,8 @@
  */
 import { AVIONICS } from '../data/fms';
 import type { FmsProcedure, FmsStep } from '../data/types';
-import { airbusTrainer } from './airbus/script';
-import { boeingTrainer } from './boeing/script';
+import { a310Trainer, a321lrTrainer, a330Trainer, airbusTrainer, belugaTrainer } from './airbus/script';
+import { b737Trainer, b747Trainer, boeingTrainer } from './boeing/script';
 import { cj4Trainer } from './cj4/script';
 import { g1000Trainer } from './garmin/script';
 import { gnsTrainer } from './gns/script';
@@ -20,7 +20,13 @@ export type { TrainerAction } from './script';
 
 export const TRAINERS: Record<string, TrainerUnit> = {
   [airbusTrainer.unitId]: airbusTrainer,
+  [a321lrTrainer.unitId]: a321lrTrainer,
+  [a330Trainer.unitId]: a330Trainer,
+  [belugaTrainer.unitId]: belugaTrainer,
+  [a310Trainer.unitId]: a310Trainer,
   [boeingTrainer.unitId]: boeingTrainer,
+  [b737Trainer.unitId]: b737Trainer,
+  [b747Trainer.unitId]: b747Trainer,
   [cj4Trainer.unitId]: cj4Trainer,
   [g1000Trainer.unitId]: g1000Trainer,
   [gnsTrainer.unitId]: gnsTrainer,

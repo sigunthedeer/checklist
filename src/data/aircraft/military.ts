@@ -10,7 +10,8 @@ export const fa18e: Aircraft = {
   sims: ['msfs2020', 'msfs2024'],
   engines: { count: 2, type: 'turbofan', name: '2 x GE F414-GE-400, 22,000 lbf each with afterburner' },
   seats: 1,
-  tags: ['fighter', 'carrier', 'navy', 'afterburner', 'catapult', 'arrested landing', 'top gun', 'hud'],
+  tags: ['fighter', 'carrier', 'navy', 'afterburner', 'catapult', 'arrested landing', 'top gun', 'hud', 'ufc', 'tacan'],
+  avionics: 'hornet-ufc',
   specs: [
     { label: 'Max takeoff weight', value: 'About 66,000 lb' },
     { label: 'G limits', value: '+7.5 / -3' },
@@ -131,7 +132,8 @@ export const fa18e: Aircraft = {
       items: [
         { c: 'Power', r: 'SET FOR MAX RANGE OR AS BRIEFED' },
         { c: 'Fuel', r: 'MONITOR, BINGO SET' },
-        { c: 'Navigation', r: 'ON TRACK' },
+        { c: 'Navigation', r: 'ON TRACK, TACAN TUNED', guide: 'tacan' },
+        { c: 'Autopilot', r: 'AS REQUIRED', guide: 'altitude-hold' },
         { c: 'Systems and cautions', r: 'SCANNED' },
       ],
     },
@@ -228,7 +230,15 @@ export const fa18e: Aircraft = {
       ],
     },
   ],
+  orientation: [
+    'Stick in the centre and two throttles on the left. Most of what you need in flight is on those two grips.',
+    'The head-up display shows speed, altitude, heading, angle of attack and the flight path marker. On approach, fly the marker and the AoA.',
+    'Just under the HUD is the up-front controller: the keypad for radios, TACAN, ILS and the autopilot.',
+    'Two displays left and right with a map display in the centre. The buttons around their edges choose the page, HSI for navigation.',
+    'The landing gear handle is on the left of the instrument panel and the hook handle on the right.',
+  ],
   notes: [
+    'The up-front controller guide covers TACAN, ILS and the autopilot modes.',
     'Carrier approaches are flown on angle of attack, not airspeed. On-speed is 8.1 units and it stays 8.1 units whatever your weight.',
     'Full power on every deck touchdown. If the hook skips a wire, that power is the only thing that gets you off the front.',
   ],
@@ -590,6 +600,12 @@ export const a10c: Aircraft = {
       ],
     },
   ],
+  orientation: [
+    'Stick in the centre and two throttles on the left, one per engine.',
+    'Mostly round gauges, with two newer screens added in the C model and a head-up display above.',
+    'The engine starter switches are tucked between the throttles and the ejection control lock on the left. Battery and generator switches are on the right side panel.',
+    'Flaps have three positions on the lever: UP, MVR for manoeuvring and takeoff, and DN for landing.',
+  ],
   notes: [
     'MSFS 2024 ships the DC Designs A-10C. Its interactive in-sim checklist highlights each switch, which helps the first time you start it.',
     'Gear limit is low (200 KIAS) and the jet slows down slowly. Get the speed off before the break, not in it.',
@@ -763,6 +779,12 @@ export const a400m: Aircraft = {
         { c: 'ATC', r: 'DECLARE' },
       ],
     },
+  ],
+  orientation: [
+    'Airbus layout: sidesticks, a dark overhead panel, and an FCU on the glareshield for speed, heading and altitude.',
+    'Both pilots have a head-up display.',
+    'Large screens across the panel. The flight plan is entered on these screens with a keyboard and trackball on the pedestal, not a separate CDU.',
+    'Four throttle levers on the pedestal, one per engine, each driving an eight-bladed propeller.',
   ],
   notes: [
     'Reported MSFS 2024 issue: below freezing the throttles move but the engines do not add power. Warmer weather works around it.',

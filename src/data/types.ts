@@ -229,4 +229,9 @@ export interface Avionics {
   procedures: FmsProcedure[];
   /** How the unit behaves in the sim: automation, known gaps, shortcuts. */
   notes?: string[];
+  /**
+   * The guide this one is derived from, for a unit shared between aircraft:
+   * same keys and procedures, that aircraft's numbers and page names.
+   */
+  basedOn?: string;
 }

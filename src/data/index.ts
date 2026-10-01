@@ -22,6 +22,7 @@ import {
   b744Supertanker,
   b7478i,
   b78710,
+  belugaXL,
 } from './aircraft/airliners';
 import {
   baronG58,
@@ -58,6 +59,7 @@ export const AIRCRAFT: Aircraft[] = [
   a320neo,
   a321lr,
   a330,
+  belugaXL,
   a310,
   b737max8,
   b7478i,

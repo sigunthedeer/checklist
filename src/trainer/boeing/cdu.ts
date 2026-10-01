@@ -36,11 +36,51 @@ type Page =
   | 'APPROACH'
   | 'OTHER';
 
-type Rating = 'TO' | 'TO 1' | 'TO 2';
-
 export type { Leg } from '../plan';
 
+/**
+ * What changes between Boeing types sharing this CDU: the IDENT page, the
+ * name of the thrust page, the takeoff and landing flaps on offer, and the
+ * numbers the FMC works out for the training flight.
+ */
+export interface BoeingProfile {
+  model: string;
+  engines: string;
+  /** Fuel on board, in thousands. */
+  fuel: number;
+  /** THRUST LIM on most Boeings, N1 LIMIT on the 737. */
+  thrustPage: string;
+  /** Takeoff ratings, full thrust first, as the thrust page lists them. */
+  ratings: [string, string, string];
+  climbs: [string, string, string];
+  takeoffFlaps: string[];
+  speeds: { v1: string; vr: string; v2: string };
+  /** Landing flaps and VREF, as APPROACH REF lists them. */
+  vref: [string, string][];
+  trim: string;
+  cg: string;
+}
+
+export const B787_PROFILE: BoeingProfile = {
+  model: '787-10',
+  engines: 'GENX-1B76',
+  fuel: 24.6,
+  thrustPage: 'THRUST LIM',
+  ratings: ['TO', 'TO 1', 'TO 2'],
+  climbs: ['CLB', 'CLB 1', 'CLB 2'],
+  takeoffFlaps: ['5', '10', '15', '20'],
+  speeds: { v1: '146', vr: '151', v2: '159' },
+  vref: [
+    ['20', '146'],
+    ['25', '142'],
+    ['30', '138'],
+  ],
+  trim: '5.5',
+  cg: '28.0',
+};
+
 export interface CduState {
+  profile: BoeingProfile;
   page: Page;
   otherTitle?: string;
   rtePage: 1 | 2;
@@ -73,7 +113,8 @@ export interface CduState {
   costIndex?: string;
   crzAlt?: string;
   sel?: string;
-  rating: Rating;
+  /** The selected takeoff rating, as the thrust page names it. */
+  rating: string;
   flaps?: string;
   accepted: { v1: boolean; vr: boolean; v2: boolean };
   flapSpd?: string;
@@ -81,6 +122,7 @@ export interface CduState {
 }
 
 export const INITIAL_STATE: CduState = {
+  profile: B787_PROFILE,
   page: 'MENU',
   rtePage: 1,
   legsPage: 0,
@@ -97,13 +139,6 @@ export const INITIAL_STATE: CduState = {
   accepted: { v1: false, vr: false, v2: false },
 };
 
-const FUEL = 24.6;
-const SPEEDS = { v1: '146', vr: '151', v2: '159' };
-const VREF: [string, string][] = [
-  ['20', '146'],
-  ['25', '142'],
-  ['30', '138'],
-];
 const LEGS_ROWS = 5;
 const MAX_SCRATCHPAD = 24;
 
@@ -363,15 +398,15 @@ function perfInit(s: CduState, key: string, sp: string): CduState {
 function thrustLim(s: CduState, key: string, sp: string): CduState {
   if (key === '1L' && sp) return /^\d{1,2}$/.test(sp) ? done(s, { sel: sp }) : fail(s);
   if (sp) return fail(s);
-  const ratings: Record<string, Rating> = { '2L': 'TO', '3L': 'TO 1', '4L': 'TO 2' };
-  if (ratings[key]) return { ...s, rating: ratings[key] };
+  const rating = { '2L': 0, '3L': 1, '4L': 2 }[key];
+  if (rating !== undefined) return { ...s, rating: s.profile.ratings[rating] };
   if (key === '6R') return { ...s, page: 'TAKEOFF' };
   return s;
 }
 
 function takeoff(s: CduState, key: string, sp: string): CduState {
   if (key === '1L' && sp) {
-    if (!/^(5|10|15|20)$/.test(sp)) return fail(s);
+    if (!s.profile.takeoffFlaps.includes(sp)) return fail(s);
     return done(s, { flaps: sp, accepted: { v1: false, vr: false, v2: false } });
   }
   if (sp) return fail(s);
@@ -384,13 +419,13 @@ function takeoff(s: CduState, key: string, sp: string): CduState {
 
 function approach(s: CduState, key: string, sp: string): CduState {
   const option = { '1R': 0, '2R': 1, '3R': 2 }[key];
-  if (option !== undefined && !sp) {
-    const [flaps, speed] = VREF[option];
+  if (option !== undefined && option < s.profile.vref.length && !sp) {
+    const [flaps, speed] = s.profile.vref[option];
     return { ...s, scratchpad: `${flaps}/${speed}` };
   }
   if (key === '4R' && sp) {
     const match = /^(\d{2})\/(\d{3})$/.exec(sp);
-    return match && VREF.some(([f]) => f === match[1]) ? done(s, { flapSpd: sp }) : fail(s);
+    return match && s.profile.vref.some(([f]) => f === match[1]) ? done(s, { flapSpd: sp }) : fail(s);
   }
   return sp ? fail(s) : s;
 }
@@ -418,7 +453,7 @@ function routeTitle(s: CduState, suffix = ''): string {
 }
 
 export function grossWeight(s: CduState): string | undefined {
-  return s.zfw ? (Number(s.zfw) + FUEL).toFixed(1) : undefined;
+  return s.zfw ? (Number(s.zfw) + s.profile.fuel).toFixed(1) : undefined;
 }
 
 export function render(s: CduState): McduScreen {
@@ -438,7 +473,7 @@ function page(s: CduState): Omit<McduScreen, 'scratchpad'> {
       return {
         title: cell('IDENT'),
         lines: sixLines([
-          { labelL: label('MODEL'), valueL: cell('787-10'), labelR: label('ENGINES'), valueR: cell('GENX-1B76') },
+          { labelL: label('MODEL'), valueL: cell(s.profile.model), labelR: label('ENGINES'), valueR: cell(s.profile.engines) },
           { labelL: label('NAV DATA'), valueL: cell('TRAINING'), labelR: label('ACTIVE'), valueR: cell('TRAINING') },
           { labelL: label('OP PROGRAM'), valueL: cell('TRAINER', 'white', true) },
           blank,
@@ -568,23 +603,27 @@ function page(s: CduState): Omit<McduScreen, 'scratchpad'> {
         titleR: label('1/2'),
         lines: sixLines([
           { labelL: label('GR WT'), valueL: cell(grossWeight(s) ?? '---.-', 'white', true), labelR: label('CRZ ALT'), valueR: entered(s.crzAlt, boxes(5)) },
-          { labelL: label('FUEL'), valueL: cell(`${FUEL.toFixed(1)} CALC`, 'white', true) },
+          { labelL: label('FUEL'), valueL: cell(`${s.profile.fuel.toFixed(1)} CALC`, 'white', true) },
           { labelL: label('ZFW'), valueL: entered(s.zfw, boxes(5)) },
           { labelL: label('RESERVES'), valueL: entered(s.reserves, boxes(4)) },
           { labelL: label('COST INDEX'), valueL: entered(s.costIndex, boxes(4)) },
-          { ...index, valueR: cell('THRUST LIM>') },
+          { ...index, valueR: cell(`${s.profile.thrustPage}>`) },
         ]),
       };
 
     case 'THRUST LIM': {
-      const rating = (r: Rating) => cell(r === s.rating ? `<${r}   <SEL>` : `<${r}`, r === s.rating ? 'green' : 'white');
+      const rating = (i: number) => {
+        const r = s.profile.ratings[i];
+        return cell(r === s.rating ? `<${r}   <SEL>` : `<${r}`, r === s.rating ? 'green' : 'white');
+      };
+      const climb = (i: number) => cell(`${s.profile.climbs[i]}>`);
       return {
-        title: cell('THRUST LIM'),
+        title: cell(s.profile.thrustPage),
         lines: sixLines([
           { labelL: label('SEL'), valueL: s.sel ? cell(`${s.sel}°`) : cell('--°'), labelR: label('OAT'), valueR: cell('+12°C', 'white', true) },
-          { valueL: rating('TO'), valueR: cell('CLB>') },
-          { valueL: rating('TO 1'), valueR: cell('CLB 1>') },
-          { valueL: rating('TO 2'), valueR: cell('CLB 2>') },
+          { valueL: rating(0), valueR: climb(0) },
+          { valueL: rating(1), valueR: climb(1) },
+          { valueL: rating(2), valueR: climb(2) },
           blank,
           { ...index, valueR: cell('TAKEOFF>') },
         ]),
@@ -593,8 +632,9 @@ function page(s: CduState): Omit<McduScreen, 'scratchpad'> {
 
     case 'TAKEOFF': {
       const computed = !!s.flaps && !!s.zfw;
-      const speed = (k: keyof typeof SPEEDS) =>
-        !computed ? cell('---') : s.accepted[k] ? cell(SPEEDS[k]) : cell(SPEEDS[k], 'white', true);
+      const { speeds } = s.profile;
+      const speed = (k: keyof typeof speeds) =>
+        !computed ? cell('---') : s.accepted[k] ? cell(speeds[k]) : cell(speeds[k], 'white', true);
       return {
         title: cell('TAKEOFF REF'),
         titleR: label('1/2'),
@@ -603,24 +643,29 @@ function page(s: CduState): Omit<McduScreen, 'scratchpad'> {
           { labelL: label('E/O ACCEL HT'), valueL: cell('1000FT', 'white', true), labelR: label('VR'), valueR: speed('vr') },
           { labelL: label('THR REDUCTION'), valueL: cell('1500FT', 'white', true), labelR: label('V2'), valueR: speed('v2') },
           { labelL: label('WIND/SLOPE'), valueL: cell('H00/U0.0', 'white', true), labelR: label('RWY/POS'), valueR: cell(s.runway ? `RW${s.runway}` : '----', 'white', true) },
-          { labelL: label('TRIM   CG'), valueL: cell('5.5   28.0%', 'white', true), labelR: label('TOGW'), valueR: cell(grossWeight(s) ?? '---.-', 'white', true) },
-          { ...index, valueR: cell('THRUST LIM>') },
+          { labelL: label('TRIM   CG'), valueL: cell(`${s.profile.trim}   ${s.profile.cg}%`, 'white', true), labelR: label('TOGW'), valueR: cell(grossWeight(s) ?? '---.-', 'white', true) },
+          { ...index, valueR: cell(`${s.profile.thrustPage}>`) },
         ]),
       };
     }
 
-    case 'APPROACH':
+    case 'APPROACH': {
+      const vrefCell = (i: number) => {
+        const row = s.profile.vref[i];
+        return row ? cell(`${row[0]}°  ${row[1]}KT`) : undefined;
+      };
       return {
         title: cell('APPROACH REF'),
         lines: sixLines([
-          { labelL: label('GROSS WT'), valueL: cell(grossWeight(s) ?? '---.-'), labelR: label('FLAPS    VREF'), valueR: cell(`${VREF[0][0]}°  ${VREF[0][1]}KT`) },
-          { valueR: cell(`${VREF[1][0]}°  ${VREF[1][1]}KT`) },
-          { valueR: cell(`${VREF[2][0]}°  ${VREF[2][1]}KT`) },
+          { labelL: label('GROSS WT'), valueL: cell(grossWeight(s) ?? '---.-'), labelR: label('FLAPS    VREF'), valueR: vrefCell(0) },
+          { valueR: vrefCell(1) },
+          { valueR: vrefCell(2) },
           { labelL: label(s.dest && s.appr ? `${s.dest}28R` : ''), labelR: label('FLAP/SPD'), valueR: s.flapSpd ? cell(s.flapSpd) : cell('--/---') },
           blank,
-          { ...index, valueR: cell('THRUST LIM>') },
+          { ...index, valueR: cell(`${s.profile.thrustPage}>`) },
         ]),
       };
+    }
 
     default:
       return {
@@ -644,6 +689,10 @@ function enterPhase(s: CduState, phase: FlightPhase, activeLeg?: string, keepPag
     scratchpad: '',
     message: undefined,
   };
+}
+
+export function createBoeingSim(profile: BoeingProfile): TrainerSim<CduState> {
+  return { ...boeingSim, initial: { ...INITIAL_STATE, profile, rating: profile.ratings[0] } };
 }
 
 export const boeingSim: TrainerSim<CduState> = {
