@@ -13,7 +13,16 @@ import {
   citationCJ4,
   citationLongitude,
 } from './aircraft/cessna-turbine';
-import { a320neo, b744Supertanker, b7478i, b78710 } from './aircraft/airliners';
+import {
+  a310,
+  a320neo,
+  a321lr,
+  a330,
+  b737max8,
+  b744Supertanker,
+  b7478i,
+  b78710,
+} from './aircraft/airliners';
 import {
   baronG58,
   bonanzaG36,
@@ -38,7 +47,7 @@ import { cap10c, extra330lt, pittsS2S } from './aircraft/aerobatic';
 import { bell407, cabriG2, h125, h225, r22, r44 } from './aircraft/helicopters';
 import { discus2c, dg1001e, ls8 } from './aircraft/gliders';
 import { boeing247d } from './aircraft/vintage';
-import { c17, fa18e } from './aircraft/military';
+import { a10c, a400m, c17, fa18e } from './aircraft/military';
 
 /**
  * The fleet. Adding an aircraft is a matter of writing its data file and
@@ -47,6 +56,10 @@ import { c17, fa18e } from './aircraft/military';
 export const AIRCRAFT: Aircraft[] = [
   // Airliners
   a320neo,
+  a321lr,
+  a330,
+  a310,
+  b737max8,
   b7478i,
   b78710,
   b744Supertanker,
@@ -99,7 +112,9 @@ export const AIRCRAFT: Aircraft[] = [
   ls8,
   // Military
   fa18e,
+  a10c,
   c17,
+  a400m,
   // Vintage
   boeing247d,
 ];

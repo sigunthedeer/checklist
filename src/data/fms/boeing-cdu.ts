@@ -42,7 +42,8 @@ export const boeingCdu: Avionics = {
     { term: 'VREF', meaning: 'Reference landing speed for the flap setting and weight. You fly the approach slightly above it.' },
   ],
   notes: [
-    'Covers the MSFS 747-8 and 787-10. Page layouts differ a little between the two, so where a step gives no key number, press the key beside the label it names.',
+    'Covers the MSFS 747-8, 787-10 and 737 MAX 8. Page layouts differ a little between them, so where a step gives no key number, press the key beside the label it names.',
+    'On the 737 the THRUST LIM page is called N1 LIMIT. It is on the same key and the steps are the same.',
     'A world map flight plan may be imported, but entering the route here is the dependable way to get LNAV and VNAV to behave.',
   ],
   procedures: [

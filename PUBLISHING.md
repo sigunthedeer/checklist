@@ -74,7 +74,7 @@ it is, but keep it to identification:
 > Checkride is a checklist reference for flight simulator pilots, laid out the way real
 > challenge-and-response checklists read.
 >
-> 46 aircraft. 519 checklists. Every one broken into the phases you actually fly, from cockpit
+> 52 aircraft. 603 checklists. Every one broken into the phases you actually fly, from cockpit
 > preparation through to shutdown, with the non-normal and emergency drills kept separate so you
 > never start one by accident.
 >

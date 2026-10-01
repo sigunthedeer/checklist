@@ -43,6 +43,7 @@ export const airbusMcdu: Avionics = {
   ],
   notes: [
     'Written to the real A320 flow. The FlyByWire A32NX follows it closely; simpler versions leave some pages out, so skip any your aircraft does not have.',
+    'The A321LR and A330 use the same pages. The example numbers are for an A320: use the weights, speeds and flap settings for your aircraft.',
     'Line select key numbers match the real MCDU. If a label is not where a step says, press the key beside the label.',
     'Depending on the version and its settings, a world map flight plan may or may not be imported. Entering the route here always works.',
   ],
